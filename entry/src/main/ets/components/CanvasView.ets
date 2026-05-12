@@ -1,7 +1,8 @@
+import { Colors, Sizes } from '../theme/Theme';
+
 @Component
 export struct CanvasView {
   @State private gridData: number[][] = [];
-  @State private cellSize: number = 20;
 
   aboutToAppear() {
     this.initializeGrid(20, 20);
@@ -20,16 +21,14 @@ export struct CanvasView {
 
   build() {
     Stack() {
-      Canvas(new CanvasRenderer())
+      Canvas()
         .width('100%')
         .height('100%')
-        .onReady(() => {
-        })
+        .backgroundColor(Colors.background)
     }
     .width('100%')
     .height('100%')
+    .border({ width: 1, color: Colors.border, radius: { radius: Sizes.borderRadius } })
+    .margin(Sizes.padding)
   }
-}
-
-class CanvasRenderer extends CanvasRenderingContext2D {
 }

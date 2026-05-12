@@ -15,7 +15,7 @@ struct NavixApp {
   @State isPlaying: boolean = false;
   @State currentStep: number = 0;
   @State totalSteps: number = 0;
-  @State statusMessage: string = 'Ready';
+  @State statusMessage: string = '就绪';
   @State nodesSearched: number = 0;
   @State pathLength: number = 0;
   @State executionTime: number = 0;
@@ -66,7 +66,7 @@ struct NavixApp {
           .borderRadius({ radius: Sizes.borderRadius })
           .onClick(() => {
             this.isPlaying = !this.isPlaying;
-            this.statusMessage = this.isPlaying ? 'Running...' : 'Paused';
+            this.statusMessage = this.isPlaying ? '运行中...' : '已暂停';
           })
 
         Button('↺')
@@ -91,18 +91,18 @@ struct NavixApp {
   buildSidebar() {
     Column() {
       Column() {
-        Text('Tools')
+        Text('工具')
           .fontSize(FontSizes.small)
           .fontColor(Colors.textSecondary)
           .fontWeight(FontWeight.Bold)
           .width('100%')
           .padding({ left: Sizes.padding, bottom: Sizes.margin })
 
-        this.buildToolButton('select', '✦', 'Select')
-        this.buildToolButton('obstacle', '▪', 'Obstacle')
-        this.buildToolButton('start', '◉', 'Start')
-        this.buildToolButton('end', '◎', 'End')
-        this.buildToolButton('eraser', '⌫', 'Eraser')
+        this.buildToolButton('select', '✦', '选择')
+        this.buildToolButton('obstacle', '▪', '障碍物')
+        this.buildToolButton('start', '◉', '起点')
+        this.buildToolButton('end', '◎', '终点')
+        this.buildToolButton('eraser', '⌫', '橡皮擦')
       }
       .padding(Sizes.padding)
       .width('100%')
@@ -111,18 +111,18 @@ struct NavixApp {
         .color(Colors.border)
 
       Column() {
-        Text('Algorithms')
+        Text('算法')
           .fontSize(FontSizes.small)
           .fontColor(Colors.textSecondary)
           .fontWeight(FontWeight.Bold)
           .width('100%')
           .padding({ left: Sizes.padding, bottom: Sizes.margin })
 
-        this.buildAlgorithmButton('AStar', 'A*', 'A* Pathfinding')
-        this.buildAlgorithmButton('Dijkstra', 'Dijk', 'Dijkstra Shortest')
-        this.buildAlgorithmButton('BFS', 'BFS', 'Breadth-First')
-        this.buildAlgorithmButton('DFS', 'DFS', 'Depth-First')
-        this.buildAlgorithmButton('JPS', 'JPS', 'Jump Point Search')
+        this.buildAlgorithmButton('AStar', 'A*', 'A*寻路算法')
+        this.buildAlgorithmButton('Dijkstra', 'Dijk', 'Dijkstra最短路径')
+        this.buildAlgorithmButton('BFS', 'BFS', '广度优先搜索')
+        this.buildAlgorithmButton('DFS', 'DFS', '深度优先搜索')
+        this.buildAlgorithmButton('JPS', 'JPS', '跳点搜索')
       }
       .padding(Sizes.padding)
       .width('100%')
@@ -188,6 +188,6 @@ struct NavixApp {
     this.pathLength = 0;
     this.executionTime = 0;
     this.isPlaying = false;
-    this.statusMessage = 'Reset';
+    this.statusMessage = '已重置';
   }
 }

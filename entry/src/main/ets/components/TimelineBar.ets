@@ -1,3 +1,5 @@
+import { Colors, Sizes, FontSizes } from '../theme/Theme';
+
 @Component
 export struct TimelineBar {
   @State currentStep: number = 0;
@@ -8,63 +10,91 @@ export struct TimelineBar {
   build() {
     Column() {
       Row() {
-        Text('步骤: ' + this.currentStep + ' / ' + this.totalSteps)
-          .fontSize(14)
-          .margin({ right: 10 })
+        Row({ space: 8 }) {
+          Button('⏮')
+            .width(32)
+            .height(32)
+            .fontSize(14)
+            .backgroundColor(Colors.buttonBackground)
+            .borderRadius({ radius: Sizes.borderRadius })
+            .onClick(() => {
+              this.currentStep = 0;
+            })
 
+          Button('◀')
+            .width(32)
+            .height(32)
+            .fontSize(14)
+            .backgroundColor(Colors.buttonBackground)
+            .borderRadius({ radius: Sizes.borderRadius })
+            .onClick(() => {
+              if (this.currentStep > 0) {
+                this.currentStep--;
+              }
+            })
+
+          Button(this.isPlaying ? '⏸' : '▶')
+            .width(40)
+            .height(32)
+            .fontSize(16)
+            .backgroundColor(Colors.active)
+            .borderRadius({ radius: Sizes.borderRadius })
+            .onClick(() => {
+              this.isPlaying = !this.isPlaying;
+            })
+
+          Button('▶')
+            .width(32)
+            .height(32)
+            .fontSize(14)
+            .backgroundColor(Colors.buttonBackground)
+            .borderRadius({ radius: Sizes.borderRadius })
+            .onClick(() => {
+              if (this.currentStep < this.totalSteps) {
+                this.currentStep++;
+              }
+            })
+
+          Button('⏭')
+            .width(32)
+            .height(32)
+            .fontSize(14)
+            .backgroundColor(Colors.buttonBackground)
+            .borderRadius({ radius: Sizes.borderRadius })
+            .onClick(() => {
+              this.currentStep = this.totalSteps;
+            })
+        }
+
+        Blank()
+
+        Text(`步骤: ${this.currentStep} / ${this.totalSteps}`)
+          .fontSize(FontSizes.medium)
+          .fontColor(Colors.textPrimary)
+          .margin({ right: Sizes.padding })
+      }
+      .width('100%')
+      .padding(Sizes.padding)
+
+      Row() {
         Slider({
           value: this.currentStep,
           min: 0,
-          max: this.totalSteps > 0 ? this.totalSteps : 1
+          max: this.totalSteps > 0 ? this.totalSteps : 1,
+          step: 1
         })
-          .onChange((value: number) => {
-            this.currentStep = Math.floor(value);
+          .blockColor(Colors.active)
+          .trackColor(Colors.sliderTrack)
+          .selectedColor(Colors.sliderSelected)
+          .onChange((val: number) => {
+            this.currentStep = Math.floor(val);
           })
       }
       .width('100%')
-
-      Row() {
-        Button('<<')
-          .onClick(() => {
-            this.currentStep = 0;
-          })
-
-        Button(this.isPlaying ? '暂停' : '播放')
-          .onClick(() => {
-            this.isPlaying = !this.isPlaying;
-          })
-
-        Button('>>')
-          .onClick(() => {
-            if (this.currentStep < this.totalSteps) {
-              this.currentStep++;
-            }
-          })
-
-        Button('单步')
-          .onClick(() => {
-            if (this.currentStep < this.totalSteps) {
-              this.currentStep++;
-            }
-          })
-
-        Select([
-          { value: '0.5x', symbol: '0.5' },
-          { value: '1x', symbol: '1' },
-          { value: '2x', symbol: '2' },
-          { value: '4x', symbol: '4' }
-        ])
-          .selected('1')
-          .onSelect((index: number, symbol: string) => {
-            this.playbackSpeed = parseFloat(symbol);
-          })
-      }
-      .width('100%')
-      .justifyContent(FlexAlign.SpaceEvenly)
-      .margin({ top: 10 })
+      .padding({ left: Sizes.padding, right: Sizes.padding, bottom: Sizes.padding })
     }
     .width('100%')
-    .padding(10)
-    .backgroundColor('#EEEEEE')
+    .backgroundColor(Colors.panelBackground)
+    .border({ width: { top: 1 }, color: Colors.border })
   }
 }
