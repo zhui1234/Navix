@@ -1,55 +1,49 @@
-export const Colors = {
-  background: '#1e1e1e',
-  panelBackground: '#252526',
-  border: '#3c3c3c',
-  active: '#007acc',
-  textPrimary: '#cccccc',
-  textSecondary: '#858585',
-  success: '#4ec9b0',
-  warning: '#dcdcaa',
-  obstacle: '#464646',
-  visited: '#094771',
-  openSet: '#2d4a3e',
-  closedSet: '#5a3d3d',
-  start: '#4ec9b0',
-  end: '#f44747',
-  path: '#dcdcaa',
-  hover: '#2a2d2e',
-  selected: '#094771',
-  buttonBackground: '#3c3c3c',
-  sliderTrack: '#3c3c3c',
-  sliderSelected: '#007acc'
-};
+export class Colors {
+  static readonly background: string = '#1e1e1e';
+  static readonly panelBackground: string = '#252526';
+  static readonly border: string = '#3c3c3c';
+  static readonly active: string = '#007acc';
+  static readonly textPrimary: string = '#cccccc';
+  static readonly textSecondary: string = '#858585';
+  static readonly success: string = '#4ec9b0';
+  static readonly warning: string = '#dcdcaa';
+  static readonly obstacle: string = '#464646';
+  static readonly visited: string = '#094771';
+  static readonly openSet: string = '#2d4a3e';
+  static readonly closedSet: string = '#5a3d3d';
+  static readonly start: string = '#4ec9b0';
+  static readonly end: string = '#f44747';
+  static readonly path: string = '#dcdcaa';
+  static readonly hover: string = '#2a2d2e';
+  static readonly selected: string = '#094771';
+  static readonly buttonBackground: string = '#3c3c3c';
+  static readonly sliderTrack: string = '#3c3c3c';
+  static readonly sliderSelected: string = '#007acc';
+}
 
-export const FontSizes = {
-  small: 12,
-  medium: 14,
-  large: 16,
-  title: 18
-};
+export class FontSizes {
+  static readonly small: number = 12;
+  static readonly medium: number = 14;
+  static readonly large: number = 16;
+  static readonly title: number = 18;
+}
 
-export const Sizes = {
-  toolbarHeight: 40,
-  sidebarWidth: 200,
-  sidebarCollapsedWidth: 48,
-  paramPanelWidth: 280,
-  timelineHeight: 80,
-  statusBarHeight: 24,
-  iconSize: 20,
-  buttonSize: 32,
-  borderRadius: 4,
-  padding: 10,
-  margin: 5
-};
+export class Sizes {
+  static readonly toolbarHeight: number = 40;
+  static readonly sidebarWidth: number = 200;
+  static readonly sidebarCollapsedWidth: number = 48;
+  static readonly paramPanelWidth: number = 280;
+  static readonly timelineHeight: number = 80;
+  static readonly statusBarHeight: number = 24;
+  static readonly iconSize: number = 20;
+  static readonly buttonSize: number = 32;
+  static readonly borderRadius: number = 4;
+  static readonly padding: number = 10;
+  static readonly margin: number = 5;
+}
 
-export const Shadows = {
-  small: '0 1px 3px rgba(0, 0, 0, 0.3)',
-  medium: '0 2px 6px rgba(0, 0, 0, 0.4)',
-  large: '0 4px 12px rgba(0, 0, 0, 0.5)'
-};
-
-export const Animations = {
-  fast: 150,
-  normal: 250,
-  slow: 400
-};
+export class Animations {
+  static readonly fast: number = 150;
+  static readonly normal: number = 250;
+  static readonly slow: number = 400;
+}

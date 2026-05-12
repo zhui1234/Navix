@@ -1,3 +1,5 @@
+import { Colors, Sizes, FontSizes } from '../theme/Theme';
+
 @Component
 export struct Toolbar {
   @State selectedTool: string = 'select';
@@ -5,20 +7,32 @@ export struct Toolbar {
 
   build() {
     Row() {
-      Button('选择')
+      Button('Select')
         .onClick(() => this.selectedTool = 'select')
-      Button('障碍')
+        .backgroundColor(this.selectedTool === 'select' ? Colors.active : Colors.buttonBackground)
+        .borderRadius({ radius: Sizes.borderRadius })
+      Button('Obstacle')
         .onClick(() => this.selectedTool = 'obstacle')
-      Button('起点')
+        .backgroundColor(this.selectedTool === 'obstacle' ? Colors.active : Colors.buttonBackground)
+        .borderRadius({ radius: Sizes.borderRadius })
+      Button('Start')
         .onClick(() => this.selectedTool = 'start')
-      Button('终点')
+        .backgroundColor(this.selectedTool === 'start' ? Colors.active : Colors.buttonBackground)
+        .borderRadius({ radius: Sizes.borderRadius })
+      Button('End')
         .onClick(() => this.selectedTool = 'end')
-      Button(this.isPlaying ? '暂停' : '运行')
+        .backgroundColor(this.selectedTool === 'end' ? Colors.active : Colors.buttonBackground)
+        .borderRadius({ radius: Sizes.borderRadius })
+      Button(this.isPlaying ? 'Pause' : 'Run')
         .onClick(() => this.isPlaying = !this.isPlaying)
+        .backgroundColor(this.isPlaying ? Colors.success : Colors.buttonBackground)
+        .borderRadius({ radius: Sizes.borderRadius })
     }
     .width('100%')
-    .height(50)
-    .padding(10)
+    .height(Sizes.toolbarHeight)
+    .padding(Sizes.padding)
     .justifyContent(FlexAlign.SpaceEvenly)
+    .backgroundColor(Colors.panelBackground)
+    .border({ width: { bottom: 1 }, color: Colors.border })
   }
 }
