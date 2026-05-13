@@ -1,7 +1,7 @@
 @Component
 export struct TitleBar {
   build() {
-    Row({ width: '100%', height: 48 }) {
+    Row() {
       Row({ space: 8 }) {
         Text('⊿')
           .fontSize(20)
@@ -50,6 +50,8 @@ export struct TitleBar {
           .fontColor($r('app.color.navix_text_primary'))
       }
     }
+    .width('100%')
+    .height(48)
     .backgroundColor($r('app.color.navix_bg_titlebar'))
     .padding({ left: 8, right: 8 })
     .alignItems(VerticalAlign.Center)
