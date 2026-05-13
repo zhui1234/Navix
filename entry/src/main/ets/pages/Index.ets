@@ -2,6 +2,9 @@ import { TitleBar } from '../components/TitleBar'
 import { StatusBar } from '../components/StatusBar'
 import { LeftTriggerBar } from '../components/LeftTriggerBar'
 import { RightTriggerBar } from '../components/RightTriggerBar'
+import { LeftPanel } from '../components/LeftPanel'
+import { RightPanel } from '../components/RightPanel'
+
 
 @Entry
 @Component
@@ -14,14 +17,7 @@ struct Index {
         Row() {
           LeftTriggerBar()
 
-          Column() {
-            Text('')
-              .fontSize(20)
-              .textAlign(TextAlign.Center)
-          }
-          .width(0)
-          .height('100%')
-          .backgroundColor($r('app.color.navix_bg_panel'))
+          LeftPanel()
 
           Column() {
             Text('画布区域')
@@ -35,14 +31,7 @@ struct Index {
           .justifyContent(FlexAlign.Center)
           .alignItems(HorizontalAlign.Center)
 
-          Column() {
-            Text('')
-              .fontSize(20)
-              .textAlign(TextAlign.Center)
-          }
-          .width(0)
-          .height('100%')
-          .backgroundColor($r('app.color.navix_bg_panel'))
+          RightPanel()
 
           RightTriggerBar()
         }
