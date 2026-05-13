@@ -1,6 +1,7 @@
 import { TitleBar } from '../components/TitleBar'
 import { StatusBar } from '../components/StatusBar'
 import { LeftTriggerBar } from '../components/LeftTriggerBar'
+import { RightTriggerBar } from '../components/RightTriggerBar'
 
 @Entry
 @Component
@@ -43,23 +44,7 @@ struct Index {
           .height('100%')
           .backgroundColor($r('app.color.navix_bg_panel'))
 
-          Column() {
-            Text('🗺')
-              .fontSize(20)
-              .textAlign(TextAlign.Center)
-            Text('⚙')
-              .fontSize(20)
-              .textAlign(TextAlign.Center)
-            Text('📊')
-              .fontSize(20)
-              .textAlign(TextAlign.Center)
-          }
-          .width(48)
-          .height('100%')
-          .backgroundColor($r('app.color.navix_bg_panel'))
-          .alignItems(HorizontalAlign.Center)
-          .padding({ top: 16 })
-          .justifyContent(FlexAlign.Start)
+          RightTriggerBar()
         }
         .width('100%')
         .height('100%')
