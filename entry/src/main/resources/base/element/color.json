@@ -1,8 +1,22 @@
 {
   "color": [
-    {
-      "name": "start_window_background",
-      "value": "#FFFFFF"
-    }
+    { "name": "navix_bg_primary", "value": "#FFFFFF" },
+    { "name": "navix_bg_panel", "value": "#F5F5F5" },
+    { "name": "navix_bg_canvas", "value": "#FAFAFA" },
+    { "name": "navix_bg_statusbar", "value": "#F0F0F0" },
+    { "name": "navix_bg_titlebar", "value": "#FAFAFA" },
+    { "name": "navix_text_primary", "value": "#1A1A1A" },
+    { "name": "navix_text_secondary", "value": "#666666" },
+    { "name": "navix_border_color", "value": "#E0E0E0" },
+    { "name": "navix_icon_color", "value": "#333333" },
+    { "name": "navix_grid_line", "value": "#DDDDDD" },
+    { "name": "navix_accent_highlight", "value": "#007AFF" },
+    { "name": "navix_node_start", "value": "#4CAF50" },
+    { "name": "navix_node_end", "value": "#F44336" },
+    { "name": "navix_node_obstacle", "value": "#424242" },
+    { "name": "navix_node_explored", "value": "#90CAF9" },
+    { "name": "navix_node_path", "value": "#FFEB3B" },
+    { "name": "navix_button_active", "value": "#007AFF" },
+    { "name": "navix_button_inactive", "value": "#BDBDBD" }
   ]
 }
