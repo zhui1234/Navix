@@ -17,6 +17,7 @@
     { "name": "navix_node_explored", "value": "#42A5F5" },
     { "name": "navix_node_path", "value": "#FFEE58" },
     { "name": "navix_button_active", "value": "#0A84FF" },
-    { "name": "navix_button_inactive", "value": "#616161" }
+    { "name": "navix_button_inactive", "value": "#616161" },
+    { "name": "start_window_background", "value": "#1E1E1E" }
   ]
 }
