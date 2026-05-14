@@ -10,14 +10,14 @@ import {
   HeatmapConfig
 } from '../models/MapTypes'
 
-@Observed
+@ObservedV2
 export class NavixStore {
-  currentTool: ToolType = ToolType.SELECT
-  currentAlgorithm: AlgorithmType = AlgorithmType.ASTAR
-  leftPanelState: LeftPanelState = LeftPanelState.COLLAPSED
-  rightPanelState: RightPanelState = RightPanelState.COLLAPSED
-  mapData: MapData = this.createEmptyMap(20, 20)
-  params: NavixParams = {
+  @Trace currentTool: ToolType = ToolType.SELECT
+  @Trace currentAlgorithm: AlgorithmType = AlgorithmType.ASTAR
+  @Trace leftPanelState: LeftPanelState = LeftPanelState.COLLAPSED
+  @Trace rightPanelState: RightPanelState = RightPanelState.COLLAPSED
+  @Trace mapData: MapData = this.createEmptyMap(20, 20)
+  @Trace params: NavixParams = {
     gridRows: 20,
     gridCols: 20,
     cellSize: 30,
@@ -30,7 +30,7 @@ export class NavixStore {
     heuristicWeight: 1.0,
     animationSpeed: 50
   }
-  heatmapConfig: HeatmapConfig = {
+  @Trace heatmapConfig: HeatmapConfig = {
     type: 'search',
     gradient: 'blue-green-red',
     opacity: 0.5,
@@ -38,14 +38,14 @@ export class NavixStore {
     realtimeUpdate: true,
     showLegend: true
   }
-  startPos: GridPos | null = null
-  endPos: GridPos | null = null
-  searchedNodes: number = 0
-  pathLength: number = 0
-  elapsedTime: number = 0
-  statusText: string = '就绪'
-  searchSteps: GridPos[][] = []
-  currentStep: number = 0
+  @Trace startPos: GridPos | null = null
+  @Trace endPos: GridPos | null = null
+  @Trace searchedNodes: number = 0
+  @Trace pathLength: number = 0
+  @Trace elapsedTime: number = 0
+  @Trace statusText: string = '就绪'
+  @Trace searchSteps: GridPos[][] = []
+  @Trace currentStep: number = 0
 
   private createEmptyMap(rows: number, cols: number): MapData {
     const grid: NodeType[][] = []

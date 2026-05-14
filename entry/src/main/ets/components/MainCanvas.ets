@@ -1,4 +1,4 @@
-@Component
+@ComponentV2
 export struct MainCanvas {
   build() {
     Column() {

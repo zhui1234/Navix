@@ -5,26 +5,22 @@ import { RightTriggerBar } from '../components/RightTriggerBar'
 import { LeftPanel } from '../components/LeftPanel'
 import { RightPanel } from '../components/RightPanel'
 import { MainCanvas } from '../components/MainCanvas'
-import { navixStore} from '../store/NavixStore'
+import { NavixStore, navixStore } from '../store/NavixStore'
 import { LeftPanelState, RightPanelState } from '../models/MapTypes'
 
 @Entry
-@Component
+@ComponentV2
 struct Index {
-  @StorageLink('leftPanelWidth') leftPanelWidth: number = 0
-  @StorageLink('rightPanelWidth') rightPanelWidth: number = 0
+  @Local store: NavixStore = navixStore
 
-  aboutToAppear(): void {
-    AppStorage.setOrCreate('leftPanelWidth', 0)
-    AppStorage.setOrCreate('rightPanelWidth', 0)
+  @Computed
+  get leftPanelWidth(): number {
+    return this.store.leftPanelState === LeftPanelState.COLLAPSED ? 0 : 180
   }
 
-  getLeftPanelWidth(): number {
-    return navixStore.leftPanelState === LeftPanelState.COLLAPSED ? 0 : 180
-  }
-
-  getRightPanelWidth(): number {
-    return navixStore.rightPanelState === RightPanelState.COLLAPSED ? 0 : 180
+  @Computed
+  get rightPanelWidth(): number {
+    return this.store.rightPanelState === RightPanelState.COLLAPSED ? 0 : 180
   }
   build() {
     Column() {
@@ -37,7 +33,7 @@ struct Index {
           Column() {
             LeftPanel()
           }
-          .width(this.getLeftPanelWidth())
+          .width(this.leftPanelWidth)
           .height('100%')
 
           MainCanvas()
@@ -45,7 +41,7 @@ struct Index {
           Column() {
             RightPanel()
           }
-          .width(this.getRightPanelWidth())
+          .width(this.rightPanelWidth)
           .height('100%')
 
           RightTriggerBar()
