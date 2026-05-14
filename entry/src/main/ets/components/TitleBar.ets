@@ -58,7 +58,7 @@ export struct TitleBar {
     }
     .width('100%')
     .height(48)
-    .backgroundColor($r('app.color.navix_bg_titlebar'))
+    .backgroundColor($r('app.color.navix_bg_toolbar'))
     .padding({ left: 8, right: 8 })
     .alignItems(VerticalAlign.Center)
   }

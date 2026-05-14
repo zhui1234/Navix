@@ -34,7 +34,7 @@ export struct StatusBar {
     }
     .width('100%')
     .height(36)
-    .backgroundColor($r('app.color.navix_bg_statusbar'))
+    .backgroundColor($r('app.color.navix_bg_toolbar'))
     .padding({ left: 12, right: 12 })
     .justifyContent(FlexAlign.End)
     .alignItems(VerticalAlign.Center)

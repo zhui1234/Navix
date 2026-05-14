@@ -12,10 +12,12 @@ import {
 
 @ObservedV2
 export class NavixStore {
-  @Trace currentTool: ToolType = ToolType.SELECT
-  @Trace currentAlgorithm: AlgorithmType = AlgorithmType.ASTAR
+  @Trace currentTool: ToolType | null = null
+  @Trace currentAlgorithm: AlgorithmType | null = null
+
   @Trace leftPanelState: LeftPanelState = LeftPanelState.COLLAPSED
   @Trace rightPanelState: RightPanelState = RightPanelState.COLLAPSED
+
   @Trace mapData: MapData = this.createEmptyMap(20, 20)
   @Trace params: NavixParams = {
     gridRows: 20,
@@ -59,19 +61,35 @@ export class NavixStore {
   }
 
   setTool(tool: ToolType): void {
-    this.currentTool = tool
+    if (this.currentTool === tool) {
+      this.currentTool = null
+    } else {
+      this.currentTool = tool
+    }
   }
 
   setAlgorithm(algo: AlgorithmType): void {
-    this.currentAlgorithm = algo
+    if (this.currentAlgorithm === algo) {
+      this.currentAlgorithm = null
+    } else {
+      this.currentAlgorithm = algo
+    }
   }
 
-  toggleLeftPanel(state: LeftPanelState): void {
-    this.leftPanelState = state
+  toggleLeftPanel(panelId: LeftPanelState) {
+    if (this.leftPanelState === panelId) {
+      this.leftPanelState = LeftPanelState.COLLAPSED
+    } else {
+      this.leftPanelState = panelId
+    }
   }
 
   toggleRightPanel(state: RightPanelState): void {
-    this.rightPanelState = state
+    if (this.rightPanelState === state) {
+      this.rightPanelState = RightPanelState.COLLAPSED
+    } else {
+      this.rightPanelState = state
+    }
   }
 
   updateParams(partial: Partial<NavixParams>): void {
@@ -144,6 +162,17 @@ export class NavixStore {
   prevStep(): void {
     if (this.currentStep > 0) {
       this.currentStep--
+    }
+  }
+
+  generateRandomObstacles(): void {
+    const obstacleDensity = 0.25
+    for (let i = 0; i < this.mapData.rows; i++) {
+      for (let j = 0; j < this.mapData.cols; j++) {
+        if (Math.random() < obstacleDensity) {
+          this.mapData.grid[i][j] = NodeType.OBSTACLE
+        }
+      }
     }
   }
 }

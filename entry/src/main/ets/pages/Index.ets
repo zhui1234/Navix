@@ -15,7 +15,7 @@ struct Index {
 
   @Computed
   get leftPanelWidth(): number {
-    return this.store.leftPanelState === LeftPanelState.COLLAPSED ? 0 : 180
+    return this.store.leftPanelState === LeftPanelState.COLLAPSED ? 0 : 150
   }
 
   @Computed

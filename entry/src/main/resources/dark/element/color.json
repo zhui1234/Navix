@@ -1,10 +1,9 @@
 {
   "color": [
-    { "name": "navix_bg_primary", "value": "#1E1E1E" },
-    { "name": "navix_bg_panel", "value": "#2D2D2D" },
-    { "name": "navix_bg_canvas", "value": "#252525" },
-    { "name": "navix_bg_statusbar", "value": "#1A1A1A" },
-    { "name": "navix_bg_titlebar", "value": "#1A1A1A" },
+    { "name": "navix_bg_primary", "value": "#181818" },
+    { "name": "navix_bg_canvas", "value": "#1A1A1A" },
+    { "name": "navix_bg_toolbar", "value": "#222222" },
+    { "name": "navix_bg_panel", "value": "#2A2A2A" },
     { "name": "navix_text_primary", "value": "#E0E0E0" },
     { "name": "navix_text_secondary", "value": "#999999" },
     { "name": "navix_border_color", "value": "#404040" },

@@ -29,7 +29,7 @@ export struct RightTriggerBar {
     }
     .width(48)
     .height('100%')
-    .backgroundColor($r('app.color.navix_bg_panel'))
+    .backgroundColor($r('app.color.navix_bg_toolbar'))
     .alignItems(HorizontalAlign.Center)
     .justifyContent(FlexAlign.Start)
     .padding({ top: 16 })
