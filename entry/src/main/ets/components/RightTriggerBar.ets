@@ -12,15 +12,15 @@ export struct RightTriggerBar {
         .fontSize(24)
         .fontColor([this.store.getColor('navix_icon_color')])
         .onClick(() => {
-          this.store.toggleRightPanel(this.store.rightPanelState === RightPanelState.MAP_SELECT ? RightPanelState.COLLAPSED : RightPanelState.MAP_SELECT)
+          this.store.toggleRightPanel(this.store.rightPanelState === RightPanelState.MAP_SETTINGS ? RightPanelState.COLLAPSED : RightPanelState.MAP_SETTINGS)
         })
-      SymbolGlyph($r('sys.symbol.slider_horizontal_2'))
+      SymbolGlyph($r('sys.symbol.eye'))
         .fontSize(24)
         .fontColor([this.store.getColor('navix_icon_color')])
         .onClick(() => {
-          this.store.toggleRightPanel(this.store.rightPanelState === RightPanelState.PARAMS ? RightPanelState.COLLAPSED : RightPanelState.PARAMS)
+          this.store.toggleRightPanel(this.store.rightPanelState === RightPanelState.VISUALIZATION ? RightPanelState.COLLAPSED : RightPanelState.VISUALIZATION)
         })
-      SymbolGlyph($r('sys.symbol.more'))
+      SymbolGlyph($r('sys.symbol.histogram'))
         .fontSize(24)
         .fontColor([this.store.getColor('navix_icon_color')])
         .onClick(() => {

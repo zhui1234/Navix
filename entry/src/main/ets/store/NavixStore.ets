@@ -312,6 +312,53 @@ export class NavixStore {
     this.generateRandomObstacles()
   }
 
+  generateGraphMap(rows: number = this.mapData.rows, cols: number = this.mapData.cols): void {
+    const safeRows = rows > 0 ? rows : 20
+    const safeCols = cols > 0 ? cols : 20
+    this.mapData = this.createEmptyMap(safeRows, safeCols)
+    this.updateParams({ gridRows: safeRows, gridCols: safeCols })
+    
+    for (let i = 0; i < safeRows; i++) {
+      for (let j = 0; j < safeCols; j++) {
+        if (Math.random() < 0.3) {
+          this.mapData.grid[i][j] = NodeType.OBSTACLE
+        }
+      }
+    }
+  }
+
+  generate2D5Map(rows: number = this.mapData.rows, cols: number = this.mapData.cols): void {
+    const safeRows = rows > 0 ? rows : 20
+    const safeCols = cols > 0 ? cols : 20
+    this.mapData = this.createEmptyMap(safeRows, safeCols)
+    this.updateParams({ gridRows: safeRows, gridCols: safeCols })
+    
+    for (let i = 0; i < safeRows; i++) {
+      for (let j = 0; j < safeCols; j++) {
+        const height = Math.floor(Math.random() * 5)
+        if (height > 3) {
+          this.mapData.grid[i][j] = NodeType.OBSTACLE
+        }
+      }
+    }
+  }
+
+  generate3DMap(rows: number = this.mapData.rows, cols: number = this.mapData.cols): void {
+    const safeRows = rows > 0 ? rows : 20
+    const safeCols = cols > 0 ? cols : 20
+    this.mapData = this.createEmptyMap(safeRows, safeCols)
+    this.updateParams({ gridRows: safeRows, gridCols: safeCols })
+    
+    for (let i = 0; i < safeRows; i++) {
+      for (let j = 0; j < safeCols; j++) {
+        const noise = Math.sin(i * 0.3) * Math.cos(j * 0.3) * Math.random() * 0.5 + Math.random() * 0.5
+        if (noise > 0.7) {
+          this.mapData.grid[i][j] = NodeType.OBSTACLE
+        }
+      }
+    }
+  }
+
   toggleTheme(): void {
     const newTheme = this.theme === 'light' ? 'dark' : 'light'
     this.theme = newTheme

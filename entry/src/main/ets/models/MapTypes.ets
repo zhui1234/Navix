@@ -26,8 +26,8 @@ export enum LeftPanelState {
 
 export enum RightPanelState {
   COLLAPSED = 0,
-  MAP_SELECT = 1,
-  PARAMS = 2,
+  MAP_SETTINGS = 1,
+  VISUALIZATION = 2,
   HEATMAP = 3
 }
 

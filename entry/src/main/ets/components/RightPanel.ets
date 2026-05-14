@@ -1,7 +1,7 @@
 import { NavixStore, navixStore } from '../store/NavixStore'
 import { RightPanelState } from '../models/MapTypes'
-import { MapSelectPanel } from './MapSelectPanel'
-import { ParamsPanel } from './ParamsPanel'
+import { MapSettingsPanel } from './MapSettingsPanel'
+import { VisualizationPanel } from './VisualizationPanel'
 import { HeatmapPanel } from './HeatmapPanel'
 
 @ComponentV2
@@ -10,10 +10,10 @@ export struct RightPanel {
 
   build() {
     Column() {
-      if (this.store.rightPanelState === RightPanelState.MAP_SELECT) {
-        MapSelectPanel()
-      } else if (this.store.rightPanelState === RightPanelState.PARAMS) {
-        ParamsPanel()
+      if (this.store.rightPanelState === RightPanelState.MAP_SETTINGS) {
+        MapSettingsPanel()
+      } else if (this.store.rightPanelState === RightPanelState.VISUALIZATION) {
+        VisualizationPanel()
       } else if (this.store.rightPanelState === RightPanelState.HEATMAP) {
         HeatmapPanel()
       }

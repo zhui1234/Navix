@@ -2,13 +2,13 @@ import { NavixStore, navixStore } from '../store/NavixStore'
 import { RightPanelState } from '../models/MapTypes'
 
 @ComponentV2
-export struct HeatmapPanel {
+export struct VisualizationPanel {
   @Local store: NavixStore = navixStore
 
   build() {
     Column({ space: 8 }) {
       Row() {
-        Text('热力图')
+        Text('可视化')
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
           .fontColor(this.store.getColor('navix_text_primary'))
@@ -19,7 +19,7 @@ export struct HeatmapPanel {
           .fontSize(14)
           .fontColor([this.store.getColor('navix_icon_color')])
           .onClick(() => {
-            this.store.toggleRightPanel(RightPanelState.HEATMAP)
+            this.store.toggleRightPanel(RightPanelState.VISUALIZATION)
           })
       }
       .width('100%')
