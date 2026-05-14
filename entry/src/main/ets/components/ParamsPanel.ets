@@ -12,13 +12,13 @@ export struct ParamsPanel {
         Text('参数设置')
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.navix_text_primary'))
+          .fontColor(this.store.getColor('navix_text_primary'))
 
         Blank()
 
         SymbolGlyph($r('sys.symbol.minus'))
           .fontSize(14)
-          .fontColor([$r('app.color.navix_icon_color')])
+          .fontColor([this.store.getColor('navix_icon_color')])
           .onClick(() => {
             this.store.toggleRightPanel(RightPanelState.PARAMS)
           })
@@ -33,11 +33,11 @@ export struct ParamsPanel {
           Row() {
             Text('行数')
               .fontSize(12)
-              .fontColor($r('app.color.navix_text_secondary'))
+              .fontColor(this.store.getColor('navix_text_secondary'))
             Blank()
             Text('20')
               .fontSize(12)
-              .fontColor($r('app.color.navix_text_primary'))
+              .fontColor(this.store.getColor('navix_text_primary'))
           }
           .width('100%')
           .padding({ left: 10, right: 10, top: 4, bottom: 4 })
@@ -45,11 +45,11 @@ export struct ParamsPanel {
           Row() {
             Text('列数')
               .fontSize(12)
-              .fontColor($r('app.color.navix_text_secondary'))
+              .fontColor(this.store.getColor('navix_text_secondary'))
             Blank()
             Text('20')
               .fontSize(12)
-              .fontColor($r('app.color.navix_text_primary'))
+              .fontColor(this.store.getColor('navix_text_primary'))
           }
           .width('100%')
           .padding({ left: 10, right: 10, top: 4, bottom: 4 })
@@ -57,11 +57,11 @@ export struct ParamsPanel {
           Row() {
             Text('显示网格线')
               .fontSize(12)
-              .fontColor($r('app.color.navix_text_secondary'))
+              .fontColor(this.store.getColor('navix_text_secondary'))
             Blank()
             Text('开')
               .fontSize(12)
-              .fontColor($r('app.color.navix_text_primary'))
+              .fontColor(this.store.getColor('navix_text_primary'))
           }
           .width('100%')
           .padding({ left: 10, right: 10, top: 4, bottom: 4 })
@@ -70,7 +70,7 @@ export struct ParamsPanel {
       }
 
       Divider()
-        .color($r('app.color.navix_border_color'))
+        .color(this.store.getColor('navix_border_color'))
         .margin({ left: 8, right: 8, top: 2, bottom: 2 })
 
       this.SectionHeader('算法设置', 'algorithm')
@@ -80,11 +80,11 @@ export struct ParamsPanel {
           Row() {
             Text('启发式类型')
               .fontSize(12)
-              .fontColor($r('app.color.navix_text_secondary'))
+              .fontColor(this.store.getColor('navix_text_secondary'))
             Blank()
             Text('曼哈顿')
               .fontSize(12)
-              .fontColor($r('app.color.navix_text_primary'))
+              .fontColor(this.store.getColor('navix_text_primary'))
           }
           .width('100%')
           .padding({ left: 10, right: 10, top: 4, bottom: 4 })
@@ -92,11 +92,11 @@ export struct ParamsPanel {
           Row() {
             Text('权重')
               .fontSize(12)
-              .fontColor($r('app.color.navix_text_secondary'))
+              .fontColor(this.store.getColor('navix_text_secondary'))
             Blank()
             Text('1.0')
               .fontSize(12)
-              .fontColor($r('app.color.navix_text_primary'))
+              .fontColor(this.store.getColor('navix_text_primary'))
           }
           .width('100%')
           .padding({ left: 10, right: 10, top: 4, bottom: 4 })
@@ -104,11 +104,11 @@ export struct ParamsPanel {
           Row() {
             Text('允许对角移动')
               .fontSize(12)
-              .fontColor($r('app.color.navix_text_secondary'))
+              .fontColor(this.store.getColor('navix_text_secondary'))
             Blank()
             Text('关')
               .fontSize(12)
-              .fontColor($r('app.color.navix_text_primary'))
+              .fontColor(this.store.getColor('navix_text_primary'))
           }
           .width('100%')
           .padding({ left: 10, right: 10, top: 4, bottom: 4 })
@@ -117,7 +117,7 @@ export struct ParamsPanel {
       }
 
       Divider()
-        .color($r('app.color.navix_border_color'))
+        .color(this.store.getColor('navix_border_color'))
         .margin({ left: 8, right: 8, top: 2, bottom: 2 })
 
       this.SectionHeader('动画设置', 'animation')
@@ -127,11 +127,11 @@ export struct ParamsPanel {
           Row() {
             Text('动画速度')
               .fontSize(12)
-              .fontColor($r('app.color.navix_text_secondary'))
+              .fontColor(this.store.getColor('navix_text_secondary'))
             Blank()
             Text('50ms')
               .fontSize(12)
-              .fontColor($r('app.color.navix_text_primary'))
+              .fontColor(this.store.getColor('navix_text_primary'))
           }
           .width('100%')
           .padding({ left: 10, right: 10, top: 4, bottom: 4 })
@@ -150,17 +150,17 @@ export struct ParamsPanel {
     Row() {
       SymbolGlyph($r('sys.symbol.chevron_down'))
         .fontSize(12)
-        .fontColor([$r('app.color.navix_text_secondary')])
+        .fontColor([this.store.getColor('navix_text_secondary')])
         .width(16)
 
       Text(title)
         .fontSize(12)
-        .fontColor($r('app.color.navix_text_primary'))
+        .fontColor(this.store.getColor('navix_text_primary'))
     }
     .width('100%')
     .padding({ left: 4, top: 6, bottom: 6 })
     .borderRadius(4)
-    .backgroundColor(this.hoveredSection === id ? '#EEEEEE' : Color.Transparent)
+    .backgroundColor(this.hoveredSection === id ? this.store.getColor('navix_border_color') : Color.Transparent)
     .onHover((isHover: boolean) => {
       this.hoveredSection = isHover ? id : null
     })

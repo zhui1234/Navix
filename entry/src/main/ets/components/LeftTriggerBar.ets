@@ -10,20 +10,20 @@ export struct LeftTriggerBar {
     Column({space: 16}) {
       SymbolGlyph($r('sys.symbol.briefcase'))
         .fontSize(24)
-        .fontColor([$r('app.color.navix_icon_color')])
+        .fontColor([this.store.getColor('navix_icon_color')])
         .onClick(() => {
           this.store.toggleLeftPanel(LeftPanelState.TOOLS)
         })
       SymbolGlyph($r('sys.symbol.puzzle'))
         .fontSize(24)
-        .fontColor([$r('app.color.navix_icon_color')])
+        .fontColor([this.store.getColor('navix_icon_color')])
         .onClick(() => {
           this.store.toggleLeftPanel(LeftPanelState.ALGORITHMS)
         })
     }
     .width(48)
     .height('100%')
-    .backgroundColor($r('app.color.navix_bg_toolbar'))
+    .backgroundColor(this.store.getColor('navix_bg_toolbar'))
     .alignItems(HorizontalAlign.Center)
     .justifyContent(FlexAlign.Start)
     .padding({ top: 16 })

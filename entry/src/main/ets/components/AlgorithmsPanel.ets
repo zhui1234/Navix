@@ -16,13 +16,13 @@ export struct AlgorithmsPanel {
         Text('算法栏')
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.navix_text_primary'))
+          .fontColor(this.store.getColor('navix_text_primary'))
 
         Blank()
 
         SymbolGlyph($r('sys.symbol.minus'))
           .fontSize(14)
-          .fontColor([$r('app.color.navix_icon_color')])
+          .fontColor([this.store.getColor('navix_icon_color')])
           .onClick(() => {
             this.store.toggleLeftPanel(LeftPanelState.ALGORITHMS)
           })
@@ -33,17 +33,17 @@ export struct AlgorithmsPanel {
       Row() {
         SymbolGlyph(this.showCommonAlgorithms ? $r('sys.symbol.chevron_down') : $r('sys.symbol.chevron_right'))
           .fontSize(12)
-          .fontColor([$r('app.color.navix_text_secondary')])
+          .fontColor([this.store.getColor('navix_text_secondary')])
           .width(16)
 
         Text('常用算法')
           .fontSize(11)
-          .fontColor($r('app.color.navix_text_secondary'))
+          .fontColor(this.store.getColor('navix_text_secondary'))
       }
       .width('100%')
       .padding({ left: 4, top: 6, bottom: 4 })
       .borderRadius(4)
-      .backgroundColor(this.hoveredCommon ? '#EEEEEE' : Color.Transparent)
+      .backgroundColor(this.hoveredCommon ? this.store.getColor('navix_border_color') : Color.Transparent)
       .onHover((isHover: boolean) => {
         this.hoveredCommon = isHover
       })
@@ -59,23 +59,23 @@ export struct AlgorithmsPanel {
       }
 
       Divider()
-        .color($r('app.color.navix_border_color'))
+        .color(this.store.getColor('navix_border_color'))
         .margin({ left: 8, right: 8, top: 2, bottom: 2 })
 
       Row() {
         SymbolGlyph(this.showOtherAlgorithms ? $r('sys.symbol.chevron_down') : $r('sys.symbol.chevron_right'))
           .fontSize(12)
-          .fontColor([$r('app.color.navix_text_secondary')])
+          .fontColor([this.store.getColor('navix_text_secondary')])
           .width(16)
 
         Text('其他算法')
           .fontSize(11)
-          .fontColor($r('app.color.navix_text_secondary'))
+          .fontColor(this.store.getColor('navix_text_secondary'))
       }
       .width('100%')
       .padding({ left: 4, top: 6, bottom: 4 })
       .borderRadius(4)
-      .backgroundColor(this.hoveredOther ? '#EEEEEE' : Color.Transparent)
+      .backgroundColor(this.hoveredOther ? this.store.getColor('navix_border_color') : Color.Transparent)
       .onHover((isHover: boolean) => {
         this.hoveredOther = isHover
       })
@@ -103,20 +103,20 @@ export struct AlgorithmsPanel {
     Column({ space: 2 }) {
       Text(name)
         .fontSize(12)
-        .fontColor(this.store.currentAlgorithm === algo ? '#333333' : $r('app.color.navix_text_primary'))
+        .fontColor(this.store.getColor('navix_text_primary'))
         .fontWeight(this.store.currentAlgorithm === algo ? FontWeight.Medium : FontWeight.Normal)
 
       if (this.hoveredAlgorithm === algo) {
         Text(hint)
           .fontSize(10)
-          .fontColor($r('app.color.navix_text_secondary'))
+          .fontColor(this.store.getColor('navix_text_secondary'))
           .lineHeight(13)
       }
     }
     .width('100%')
     .padding({ left: 10, right: 10, top: 7, bottom: 7 })
     .borderRadius(6)
-    .backgroundColor(this.store.currentAlgorithm === algo ? '#DDDDDD' : (this.hoveredAlgorithm === algo ? '#EEEEEE' : Color.Transparent))
+    .backgroundColor(this.store.currentAlgorithm === algo ? this.store.getColor('navix_button_active') : (this.hoveredAlgorithm === algo ? this.store.getColor('navix_border_color') : Color.Transparent))
     .onHover((isHover: boolean) => {
       this.hoveredAlgorithm = isHover ? algo : null
     })

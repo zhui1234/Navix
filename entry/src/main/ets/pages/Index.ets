@@ -57,6 +57,6 @@ struct Index {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.navix_bg_primary'))
+    .backgroundColor(this.store.getColor('navix_bg_primary'))
   }
 }

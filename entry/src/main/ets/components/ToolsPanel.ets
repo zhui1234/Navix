@@ -12,13 +12,13 @@ export struct ToolsPanel {
         Text('工具栏')
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.navix_text_primary'))
+          .fontColor(this.store.getColor('navix_text_primary'))
 
         Blank()
 
         SymbolGlyph($r('sys.symbol.minus'))
           .fontSize(14)
-          .fontColor([$r('app.color.navix_icon_color')])
+          .fontColor([this.store.getColor('navix_icon_color')])
           .onClick(() => {
             this.store.toggleLeftPanel(LeftPanelState.TOOLS)
           })
@@ -33,7 +33,7 @@ export struct ToolsPanel {
       this.ToolButton(ToolType.ERASER, '橡皮', '擦除网格上的内容')
 
       Divider()
-        .color($r('app.color.navix_border_color'))
+        .color(this.store.getColor('navix_border_color'))
         .margin({ left: 8, right: 8, top: 2, bottom: 2 })
 
       this.ToolButton(ToolType.RANDOM, '随机生成', '随机生成障碍物')
@@ -49,20 +49,20 @@ export struct ToolsPanel {
     Column({ space: 2 }) {
       Text(label)
         .fontSize(13)
-        .fontColor(this.store.currentTool === tool ? '#333333' : $r('app.color.navix_text_primary'))
+        .fontColor(this.store.getColor('navix_text_primary'))
         .fontWeight(this.store.currentTool === tool ? FontWeight.Medium : FontWeight.Normal)
 
       if (this.hoveredTool === tool) {
         Text(hint)
           .fontSize(11)
-          .fontColor($r('app.color.navix_text_secondary'))
+          .fontColor(this.store.getColor('navix_text_secondary'))
           .lineHeight(14)
       }
     }
     .width('100%')
     .padding({ left: 10, right: 10, top: 8, bottom: 8 })
     .borderRadius(6)
-    .backgroundColor(this.store.currentTool === tool ? '#DDDDDD' : (this.hoveredTool === tool ? '#EEEEEE' : Color.Transparent))
+    .backgroundColor(this.store.currentTool === tool ? this.store.getColor('navix_button_active') : (this.hoveredTool === tool ? this.store.getColor('navix_border_color') : Color.Transparent))
     .onHover((isHover: boolean) => {
       this.hoveredTool = isHover ? tool : null
     })

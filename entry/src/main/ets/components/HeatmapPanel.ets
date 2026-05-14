@@ -13,13 +13,13 @@ export struct HeatmapPanel {
         Text('热力图配置')
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.navix_text_primary'))
+          .fontColor(this.store.getColor('navix_text_primary'))
 
         Blank()
 
         SymbolGlyph($r('sys.symbol.minus'))
           .fontSize(14)
-          .fontColor([$r('app.color.navix_icon_color')])
+          .fontColor([this.store.getColor('navix_icon_color')])
           .onClick(() => {
             this.store.toggleRightPanel(RightPanelState.HEATMAP)
           })
@@ -29,7 +29,7 @@ export struct HeatmapPanel {
 
       Text('热力图类型')
         .fontSize(12)
-        .fontColor($r('app.color.navix_text_secondary'))
+        .fontColor(this.store.getColor('navix_text_secondary'))
         .width('100%')
         .padding({ left: 10, right: 10, top: 4, bottom: 4 })
 
@@ -39,19 +39,19 @@ export struct HeatmapPanel {
       this.TypeButton('custom', '自定义', '根据自定义数据生成热力图')
 
       Divider()
-        .color($r('app.color.navix_border_color'))
+        .color(this.store.getColor('navix_border_color'))
         .margin({ left: 8, right: 8, top: 4, bottom: 4 })
 
       Text('渐变色方案')
         .fontSize(12)
-        .fontColor($r('app.color.navix_text_secondary'))
+        .fontColor(this.store.getColor('navix_text_secondary'))
         .width('100%')
         .padding({ left: 10, right: 10, top: 4, bottom: 4 })
 
       Row() {
         Text('蓝-绿-红')
           .fontSize(12)
-          .fontColor($r('app.color.navix_text_primary'))
+          .fontColor(this.store.getColor('navix_text_primary'))
       }
       .width('100%')
       .padding({ left: 10, right: 10, top: 8, bottom: 8 })
@@ -59,19 +59,19 @@ export struct HeatmapPanel {
       .backgroundColor(Color.Transparent)
 
       Divider()
-        .color($r('app.color.navix_border_color'))
+        .color(this.store.getColor('navix_border_color'))
         .margin({ left: 8, right: 8, top: 4, bottom: 4 })
 
       Text('透明度')
         .fontSize(12)
-        .fontColor($r('app.color.navix_text_secondary'))
+        .fontColor(this.store.getColor('navix_text_secondary'))
         .width('100%')
         .padding({ left: 10, right: 10, top: 4, bottom: 4 })
 
       Row() {
         Text('50%')
           .fontSize(12)
-          .fontColor($r('app.color.navix_text_primary'))
+          .fontColor(this.store.getColor('navix_text_primary'))
       }
       .width('100%')
       .padding({ left: 10, right: 10, top: 8, bottom: 8 })
@@ -81,11 +81,11 @@ export struct HeatmapPanel {
       Row() {
         SymbolGlyph($r('sys.symbol.checkmark_square'))
           .fontSize(14)
-          .fontColor([$r('app.color.navix_icon_color')])
+          .fontColor([this.store.getColor('navix_icon_color')])
 
         Text('实时更新')
           .fontSize(12)
-          .fontColor($r('app.color.navix_text_primary'))
+          .fontColor(this.store.getColor('navix_text_primary'))
           .margin({ left: 8 })
       }
       .width('100%')
@@ -96,11 +96,11 @@ export struct HeatmapPanel {
       Row() {
         SymbolGlyph($r('sys.symbol.checkmark_square'))
           .fontSize(14)
-          .fontColor([$r('app.color.navix_icon_color')])
+          .fontColor([this.store.getColor('navix_icon_color')])
 
         Text('显示图例')
           .fontSize(12)
-          .fontColor($r('app.color.navix_text_primary'))
+          .fontColor(this.store.getColor('navix_text_primary'))
           .margin({ left: 8 })
       }
       .width('100%')
@@ -119,20 +119,20 @@ export struct HeatmapPanel {
     Column({ space: 2 }) {
       Text(name)
         .fontSize(12)
-        .fontColor(this.selectedType === id ? '#333333' : $r('app.color.navix_text_primary'))
+        .fontColor(this.store.getColor('navix_text_primary'))
         .fontWeight(this.selectedType === id ? FontWeight.Medium : FontWeight.Normal)
 
       if (this.hoveredType === id) {
         Text(hint)
           .fontSize(10)
-          .fontColor($r('app.color.navix_text_secondary'))
+          .fontColor(this.store.getColor('navix_text_secondary'))
           .lineHeight(13)
       }
     }
     .width('100%')
     .padding({ left: 10, right: 10, top: 7, bottom: 7 })
     .borderRadius(6)
-    .backgroundColor(this.selectedType === id ? '#DDDDDD' : (this.hoveredType === id ? '#EEEEEE' : Color.Transparent))
+    .backgroundColor(this.selectedType === id ? this.store.getColor('navix_button_active') : (this.hoveredType === id ? this.store.getColor('navix_border_color') : Color.Transparent))
     .onHover((isHover: boolean) => {
       this.hoveredType = isHover ? id : null
     })

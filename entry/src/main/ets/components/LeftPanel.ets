@@ -17,6 +17,6 @@ export struct LeftPanel {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.navix_bg_panel'))
+    .backgroundColor(this.store.getColor('navix_bg_panel'))
   }
 }
