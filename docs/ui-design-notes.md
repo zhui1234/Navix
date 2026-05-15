@@ -1,109 +1,62 @@
-# Navix 主页面布局开发笔记
+# Navix
 
-## 概述
-创建 Navix 应用的主页面 `Index.ets`，实现完整的布局框架。页面采用三段式结构：顶部标题栏、中间可伸缩内容区、底部状态栏。所有子区域使用 Text 组件占位，暂不引入自定义组件。
+## UI
 
-## 文件创建
-- 新建文件：`entry/src/main/ets/pages/Index.ets`
+### 框架
 
-## 布局架构
+'''
+Column
+├── TitleBar
+├── Row
+│   ├── LeftTriggerBar
+│   ├── Column
+│   │   └── LeftPanel
+│   ├── MainCanvas
+│   ├── Column
+│   │   └── RightPanel
+│   └── RightTriggerBar
+└── StatusBar
 
-```
-┌─────────────────────────────────────┐
-│          区域1: 顶部标题栏          │  height: 48vp
-├──┬──────────┬────────────┬──────┬──┤
-│左│  占位0   │  画布区域  │占位0 │右│
-│工│          │  (可伸缩)  │      │工│
-│具│          │            │      │具│
-│栏│          │            │      │栏│
-├──┴──────────┴────────────┴──────┴──┤
-│          区域3: 底部状态栏          │  height: 36vp
-└─────────────────────────────────────┘
-```
 
-## 详细实现
+### TitleBar
 
-### 根容器
-- Column 组件
-- 宽度和高度均为 100%
-- 无内外边距
+TitleBar (ComponentV2, @ComponentV2)
+└── Row
+├── Row (space: 8)
+│   ├── Image (app_icon, 24x24)
+│   ├── SymbolGlyph (square_grid_2x2, 20fp)
+│   └── SymbolGlyph (lightbulb, 20fp)
+├── Blank
+├── Row (space: 6)
+│   ├── SymbolGlyph (backward_end_fill, 18fp, onClick → store.currentStep=0)
+│   ├── SymbolGlyph (play_fill, 18fp)
+│   ├── SymbolGlyph (forward_end_fill, 18fp, onClick → store.nextStep())
+│   └── Text ("步骤 {currentStep}/{searchSteps.length}")
+├── Blank
+└── Row (space: 10)
+├── SymbolGlyph (gearshape, 20fp)
+├── SymbolGlyph (minus, 20fp)
+├── SymbolGlyph (square, 20fp)
+└── SymbolGlyph (xmark, 20fp)
 
-### 区域1：顶部标题栏
-- **容器**：Column，宽 100%，高 48vp
-- **背景色**：`$r('app.color.navix_bg_titlebar')`
-- **内嵌 Row**：宽高 100%，左右内边距 8vp
-- **布局结构**：
-    - **左对齐组**（Row，间距 8vp）：
-        - 菜单图标 `⊿`（20fp）
-        - 汉堡菜单 `☰`（18fp）
-        - 帮助 `?`（16fp）
-    - **分隔**：Blank()
-    - **居中组**（Row，间距 6vp）：
-        - 导航控制：`⏮` `◀` `步骤 0/0` `▶` `▶▶` `⏭`
-        - 字号 14fp，次要文字色
-    - **分隔**：Blank()
-    - **右对齐组**（Row，间距 10vp）：
-        - 窗口控制：`⚙` `─` `◻` `✕`
-        - 字号 16fp，主要文字色
+### StatusBar
 
-### 区域2：中间可伸缩内容区
-- **容器**：Row，宽 100%，layoutWeight(1) 自动填充
-- **五个子区域**：
-
-| 序号 | 类型 | 宽度 | 背景色 Token | 内容描述 |
-|------|------|------|-------------|----------|
-| 1 | Column | 48vp | navix_bg_panel | 左工具栏：`🔧` `🧮`，上对齐，间距 16vp |
-| 2 | Column | 0vp | navix_bg_panel | 左侧面板占位（初始隐藏） |
-| 3 | Column | layoutWeight(1) | navix_bg_canvas | 画布区域：`画布区域`，完全居中 |
-| 4 | Column | 0vp | navix_bg_panel | 右侧面板占位（初始隐藏） |
-| 5 | Column | 48vp | navix_bg_panel | 右工具栏：`🗺` `⚙` `📊`，上对齐，间距 16vp |
-
-- **样式规范**：
-    - 工具栏图标字号 20fp
-    - 工具栏 Column：alignItems(HorizontalAlign.Center)，顶部内边距 16vp
-    - 画布 Column：justifyContent(FlexAlign.Center) + alignItems(HorizontalAlign.Center)
-    - 画布文字字号 16fp
-    - 侧面板初始宽度为 0vp，后续通过状态控制展开
-
-### 区域3：底部状态栏
-- **容器**：Column，宽 100%，高 36vp
-- **背景色**：`$r('app.color.navix_bg_statusbar')`
-- **内嵌 Row**：宽高 100%，左右内边距 12vp，右对齐
-- **内容项**（竖线分隔）：
-    - `● 就绪`：12fp，绿色 `#4CAF50`
-    - `|`：12fp，次要文字色
-    - `地图大小: 20×20`：12fp，次要文字色
-    - `|`：12fp，次要文字色
-    - `搜索节点: 0`：12fp，次要文字色
-    - `|`：12fp，次要文字色
-    - `路径长度: 0`：12fp，次要文字色
-    - `|`：12fp，次要文字色
-    - `时间: 0ms`：12fp，次要文字色
-
-## 代码规范
-
-### 装饰器与结构
-- 使用 `@Entry` 和 `@Component` 装饰器
-- 标准 `struct` 声明，包含 `build()` 方法
-- 无需 `@State` 变量（当前为静态布局）
-
-### 类型与语法
-- 禁止使用 `any` 类型
-- 不使用展开运算符 `...`
-- 不使用 `console.log`
-- 所有组件正确闭合
-
-### 颜色引用规则
-- `● 就绪` 文字色：直接使用 `'#4CAF50'`
-- 竖线 `|` 和数据项：使用 `$r('app.color.navix_text_secondary')`
-- 其他文字和背景：统一使用 `$r('app.color.navix_*')` 资源引用
-
-### 依赖
-- 无需导入任何自定义组件
-- 仅使用系统 ArkTS 组件（Column、Row、Text、Blank）
-
-## 后续扩展点
-- 区域2和区域4的面板展开/收起逻辑（需添加状态管理）
-- 导航控制按钮的交互功能
-- 画布区域的实际渲染
-- 状态栏数据的动态更新
+StatusBar (ComponentV2, @ComponentV2)
+└── Row
+├── SymbolGlyph (moon_fill, 18fp, onClick → toggleTheme())
+├── Row (space: 4, layoutWeight: 1)
+│   ├── Text ("● {statusText}")
+│   ├── Text (" | ")
+│   ├── Text ("地图大小: {cols}×{rows}")
+│   ├── Text (" | ")
+│   ├── Text ("搜索节点: {searchedNodes}")
+│   ├── Text (" | ")
+│   ├── Text ("路径长度: {pathLength}")
+│   ├── Text (" | ")
+│   ├── Text ("时间: {elapsedTime}ms")
+│   └── Text (" | ")
+└── Row (space: 6)
+├── Text ("缩放", 11fp)
+├── Slider (width: 110, min: 10, max: 300, step: 1)
+├── TextInput (type: Number, width: 44, height: 24)
+└── Text ("%", 11fp)
