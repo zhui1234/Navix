@@ -46,7 +46,7 @@ export enum AlgorithmType {
   BFS = 2,
   DFS = 3,
   GREEDY_BFS = 4,
-  JPS = 5,
+  IDA_STAR = 5,
   DSTAR_LITE = 6,
   THETA_STAR = 7,
   RRT = 8,

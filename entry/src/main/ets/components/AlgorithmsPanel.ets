@@ -90,7 +90,7 @@ export struct AlgorithmsPanel {
 
       if (this.showOtherAlgorithms) {
         this.AlgorithmButton(AlgorithmType.GREEDY_BFS, '贪心 BFS', '只考虑启发式距离，速度快但不保证最优')
-        this.AlgorithmButton(AlgorithmType.JPS, 'JPS', '跳点搜索，优化 A* 的路径剪枝')
+        this.AlgorithmButton(AlgorithmType.IDA_STAR, 'IDA*', '迭代加深 A*，内存占用低，可能更慢')
         this.AlgorithmButton(AlgorithmType.DSTAR_LITE, 'D* Lite', '动态路径规划，支持地图变化')
         this.AlgorithmButton(AlgorithmType.THETA_STAR, 'Theta*', '任意角度路径，允许对角线移动')
         this.AlgorithmButton(AlgorithmType.RRT, 'RRT', '快速随机树，适合高维空间')

@@ -64,7 +64,7 @@ export struct StatusBar {
         Text(' | ')
           .fontSize(12)
           .fontColor(this.store.getColor('navix_text_secondary'))
-        Text(`地图类型: ${this.store.currentMapType}`)
+        Text(`地图类型: ${this.store.getMapTypeName(this.store.currentMapType)}`)
           .fontSize(12)
           .fontColor(this.store.getColor('navix_text_secondary'))
         Text(' | ')
@@ -76,7 +76,7 @@ export struct StatusBar {
         Text(' | ')
           .fontSize(12)
           .fontColor(this.store.getColor('navix_text_secondary'))
-        Text(`障碍数: ${this.store.getObstacleCount()}`)
+        Text(`障碍数: ${this.store.obstacleCount}`)
           .fontSize(12)
           .fontColor(this.store.getColor('navix_text_secondary'))
       }

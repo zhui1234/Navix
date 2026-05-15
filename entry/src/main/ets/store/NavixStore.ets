@@ -17,7 +17,7 @@ import { DijkstraPathfinder } from '../algorithms/Dijkstra'
 import { BFSPathfinder } from '../algorithms/BFS'
 import { DFSPathfinder } from '../algorithms/DFS'
 import { GreedyBFSPathfinder } from '../algorithms/GreedyBFS'
-import { JPSPathfinder } from '../algorithms/JPS'
+import { IDAStarPathfinder } from '../algorithms/IDAStar'
 
 export class AlgorithmCompareResult {
   algo: AlgorithmType
@@ -87,6 +87,7 @@ export class NavixStore {
   @Trace statusText: string = '就绪'
   @Trace searchSteps: GridPos[][] = []
   @Trace currentStep: number = 0
+  @Trace obstacleCount: number = 0
   @Trace visualizationMode: VisualizationMode = VisualizationMode.NONE
   @Trace visualizationAlgorithm: AlgorithmType | null = null
   @Trace visualizationClosedMask: boolean[] = []
@@ -110,7 +111,7 @@ export class NavixStore {
     return { grid, rows, cols }
   }
 
-  getObstacleCount(): number {
+  private computeObstacleCount(): number {
     if (this.currentMapType !== MapType.GRID) {
       return 0
     }
@@ -123,6 +124,26 @@ export class NavixStore {
       }
     }
     return count
+  }
+
+  getObstacleCount(): number {
+    return this.obstacleCount
+  }
+
+  getMapTypeName(mapType: MapType): string {
+    if (mapType === MapType.GRID) {
+      return '栅格'
+    }
+    if (mapType === MapType.GRAPH) {
+      return '图'
+    }
+    if (mapType === MapType.MAP_2D5) {
+      return '2.5D'
+    }
+    if (mapType === MapType.MAP_3D) {
+      return '3D'
+    }
+    return `${mapType}`
   }
 
   setTool(tool: ToolType): void {
@@ -194,8 +215,8 @@ export class NavixStore {
     if (algo === AlgorithmType.GREEDY_BFS) {
       return '贪心BFS'
     }
-    if (algo === AlgorithmType.JPS) {
-      return 'JPS'
+    if (algo === AlgorithmType.IDA_STAR) {
+      return 'IDA*'
     }
     if (algo === AlgorithmType.DSTAR_LITE) {
       return 'D* Lite'
@@ -228,7 +249,7 @@ export class NavixStore {
     if (algo === AlgorithmType.GREEDY_BFS) {
       return '#14B8A6'
     }
-    if (algo === AlgorithmType.JPS) {
+    if (algo === AlgorithmType.IDA_STAR) {
       return '#EF4444'
     }
     return '#64748B'
@@ -282,9 +303,9 @@ export class NavixStore {
         const t0 = Date.now()
         res = new GreedyBFSPathfinder().findPath(map, this.startPos, this.endPos, opts)
         elapsedMs = Date.now() - t0
-      } else if (algo === AlgorithmType.JPS) {
+      } else if (algo === AlgorithmType.IDA_STAR) {
         const t0 = Date.now()
-        res = new JPSPathfinder().findPath(map, this.startPos, this.endPos, opts)
+        res = new IDAStarPathfinder().findPath(map, this.startPos, this.endPos, opts)
         elapsedMs = Date.now() - t0
       } else {
         results.push(new AlgorithmCompareResult(algo, false, false, 0, 0, 0, 0, new Array<boolean>(n).fill(false), new Array<boolean>(n).fill(false)))
@@ -344,6 +365,7 @@ export class NavixStore {
 
   setMapType(mapType: MapType): void {
     this.currentMapType = mapType
+    this.obstacleCount = this.computeObstacleCount()
   }
 
   toggleLeftPanel(panelId: LeftPanelState) {
@@ -404,6 +426,7 @@ export class NavixStore {
   }
 
   markMapChanged(): void {
+    this.obstacleCount = this.computeObstacleCount()
     this.mapVersion++
     if (this.compareResults.length > 0) {
       this.compareResults = []
@@ -612,8 +635,8 @@ export class NavixStore {
       || algo === AlgorithmType.BFS
       || algo === AlgorithmType.DFS
       || algo === AlgorithmType.GREEDY_BFS
-      || algo === AlgorithmType.JPS)) {
-      this.statusText = '当前仅实现 A* / Dijkstra / BFS / DFS / 贪心BFS / JPS 的可视化'
+      || algo === AlgorithmType.IDA_STAR)) {
+      this.statusText = '当前仅实现 A* / Dijkstra / BFS / DFS / 贪心BFS / IDA* 的可视化'
       return
     }
 
@@ -641,7 +664,7 @@ export class NavixStore {
       if (algo === AlgorithmType.GREEDY_BFS) {
         res = new GreedyBFSPathfinder().findPath(map, this.startPos, this.endPos, opts)
       } else {
-        res = new JPSPathfinder().findPath(map, this.startPos, this.endPos, opts)
+        res = new IDAStarPathfinder().findPath(map, this.startPos, this.endPos, opts)
       }
     }
 
