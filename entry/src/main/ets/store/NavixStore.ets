@@ -60,6 +60,9 @@ export class NavixStore {
   @Trace mapVersion: number = 0
   @Trace canvasZoomPercent: number = 100
   @Trace theme: 'light' | 'dark' = 'light'
+  @Trace viewMode: 'edit' | 'present' = 'edit'
+  @Trace settingsMenuOpen: boolean = false
+  @Trace centerDialog: 'none' | 'settings' | 'theme' | 'view' = 'none'
   @Trace params: NavixParams = {
     gridRows: 20,
     gridCols: 20,
@@ -83,6 +86,8 @@ export class NavixStore {
   }
   @Trace startPos: GridPos | null = null
   @Trace endPos: GridPos | null = null
+  @Trace selectedCell: GridPos | null = null
+  @Trace selectedCellMenuOpen: boolean = false
   @Trace searchedNodes: number = 0
   @Trace pathLength: number = 0
   @Trace elapsedTime: number = 0
@@ -152,8 +157,14 @@ export class NavixStore {
   setTool(tool: ToolType): void {
     if (this.currentTool === tool) {
       this.currentTool = null
+      this.selectedCell = null
+      this.selectedCellMenuOpen = false
     } else {
       this.currentTool = tool
+      if (tool !== ToolType.SELECT) {
+        this.selectedCell = null
+        this.selectedCellMenuOpen = false
+      }
     }
   }
 
@@ -559,6 +570,95 @@ export class NavixStore {
         this.markMapChanged()
       }
     }
+  }
+
+  selectCell(row: number, col: number): void {
+    if (this.currentMapType !== MapType.GRID) {
+      return
+    }
+    if (row < 0 || row >= this.mapData.rows || col < 0 || col >= this.mapData.cols) {
+      return
+    }
+    this.selectedCell = { row, col }
+    this.selectedCellMenuOpen = false
+  }
+
+  clearSelectedCell(): void {
+    this.selectedCell = null
+    this.selectedCellMenuOpen = false
+  }
+
+  openSelectedCellMenu(): void {
+    if (this.selectedCell === null) {
+      return
+    }
+    if (this.currentTool !== ToolType.SELECT) {
+      return
+    }
+    this.selectedCellMenuOpen = true
+  }
+
+  closeSelectedCellMenu(): void {
+    this.selectedCellMenuOpen = false
+  }
+
+  setCellAsStart(row: number, col: number): void {
+    if (this.currentMapType !== MapType.GRID) {
+      return
+    }
+    if (row < 0 || row >= this.mapData.rows || col < 0 || col >= this.mapData.cols) {
+      return
+    }
+    if (this.endPos && this.endPos.row === row && this.endPos.col === col) {
+      this.endPos = null
+    }
+    if (this.startPos) {
+      if (!(this.startPos.row === row && this.startPos.col === col)) {
+        this.updateCell(this.startPos.row, this.startPos.col, NodeType.EMPTY)
+      }
+    }
+    this.startPos = { row, col }
+    this.updateCell(row, col, NodeType.START)
+    this.selectCell(row, col)
+  }
+
+  setCellAsEnd(row: number, col: number): void {
+    if (this.currentMapType !== MapType.GRID) {
+      return
+    }
+    if (row < 0 || row >= this.mapData.rows || col < 0 || col >= this.mapData.cols) {
+      return
+    }
+    if (this.startPos && this.startPos.row === row && this.startPos.col === col) {
+      this.startPos = null
+    }
+    if (this.endPos) {
+      if (!(this.endPos.row === row && this.endPos.col === col)) {
+        this.updateCell(this.endPos.row, this.endPos.col, NodeType.EMPTY)
+      }
+    }
+    this.endPos = { row, col }
+    this.updateCell(row, col, NodeType.END)
+    this.selectCell(row, col)
+  }
+
+  setCellAsObstacle(row: number, col: number): void {
+    if (this.currentMapType !== MapType.GRID) {
+      return
+    }
+    if (row < 0 || row >= this.mapData.rows || col < 0 || col >= this.mapData.cols) {
+      return
+    }
+    const cur = this.mapData.grid[row][col]
+    const normalized = (cur === NodeType.PATH || cur === NodeType.EXPLORED) ? NodeType.EMPTY : cur
+    if (normalized === NodeType.START) {
+      this.startPos = null
+    }
+    if (normalized === NodeType.END) {
+      this.endPos = null
+    }
+    this.updateCell(row, col, NodeType.OBSTACLE)
+    this.selectCell(row, col)
   }
 
   applyToolAt(row: number, col: number): void {

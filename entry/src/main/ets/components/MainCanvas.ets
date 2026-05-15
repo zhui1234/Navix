@@ -61,6 +61,11 @@ export struct MainCanvas {
     return this.store.getCompareNodeType(this.algorithm, row, col, base)
   }
 
+  isCellSelected(row: number, col: number): boolean {
+    const s = this.store.selectedCell
+    return this.store.currentTool === ToolType.SELECT && this.algorithm === null && s !== null && s.row === row && s.col === col
+  }
+
   getComparePathColors(row: number, col: number, base: NodeType): string[] {
     if (this.algorithm !== null) {
       return []
@@ -509,25 +514,99 @@ export struct MainCanvas {
               ForEach(this.store.mapData.grid, (row: NodeType[], rowIndex: number) => {
                 Row({ space: 0 }) {
                   ForEach(row, (cell: NodeType, colIndex: number) => {
-                    Stack() {
-                      Column()
-                        .width('100%')
-                        .height('100%')
-                        .backgroundColor(this.getCellColor(this.getDisplayNodeType(rowIndex, colIndex, cell)))
-                      this.ComparePathOverlay(rowIndex, colIndex, cell)
-                      this.VisualizationOverlay(rowIndex, colIndex, cell)
-                    }
-                      .width(this.getScaledCellSize())
-                      .height(this.getScaledCellSize())
-                      .border({
-                        width: this.store.params.showGridLines ? 1 : 0,
-                        color: this.store.params.gridLineColor || this.store.getColor('navix_grid_line')
-                      })
-                      .onClick(() => {
-                        if (this.algorithm === null) {
-                          this.store.applyToolAt(rowIndex, colIndex)
+                    if (this.algorithm === null && this.store.currentTool === ToolType.SELECT) {
+                      if (this.isCellSelected(rowIndex, colIndex)) {
+                        Stack() {
+                          Column()
+                            .width('100%')
+                            .height('100%')
+                            .backgroundColor(this.getCellColor(this.getDisplayNodeType(rowIndex, colIndex, cell)))
+                          this.ComparePathOverlay(rowIndex, colIndex, cell)
+                          this.VisualizationOverlay(rowIndex, colIndex, cell)
+                          Column()
+                            .width('100%')
+                            .height('100%')
+                            .border({ width: 2, color: this.store.getColor('navix_accent_highlight') })
+                            .backgroundColor(Color.Transparent)
                         }
-                      })
+                          .width(this.getScaledCellSize())
+                          .height(this.getScaledCellSize())
+                          .border({
+                            width: this.store.params.showGridLines ? 1 : 0,
+                            color: this.store.params.gridLineColor || this.store.getColor('navix_grid_line')
+                          })
+                          .onClick(() => {
+                            this.store.selectCell(rowIndex, colIndex)
+                            this.store.openSelectedCellMenu()
+                          })
+                          .bindMenu(this.store.selectedCellMenuOpen && this.isCellSelected(rowIndex, colIndex), [
+                            {
+                              value: '设为障碍',
+                              action: () => {
+                                this.store.setCellAsObstacle(rowIndex, colIndex)
+                              }
+                            },
+                            {
+                              value: '设为起点',
+                              action: () => {
+                                this.store.setCellAsStart(rowIndex, colIndex)
+                              }
+                            },
+                            {
+                              value: '设为终点',
+                              action: () => {
+                                this.store.setCellAsEnd(rowIndex, colIndex)
+                              }
+                            }
+                          ], {
+                            onDisappear: () => {
+                              this.store.closeSelectedCellMenu()
+                            }
+                          })
+                      } else {
+                        Stack() {
+                          Column()
+                            .width('100%')
+                            .height('100%')
+                            .backgroundColor(this.getCellColor(this.getDisplayNodeType(rowIndex, colIndex, cell)))
+                          this.ComparePathOverlay(rowIndex, colIndex, cell)
+                          this.VisualizationOverlay(rowIndex, colIndex, cell)
+                        }
+                          .width(this.getScaledCellSize())
+                          .height(this.getScaledCellSize())
+                          .border({
+                            width: this.store.params.showGridLines ? 1 : 0,
+                            color: this.store.params.gridLineColor || this.store.getColor('navix_grid_line')
+                          })
+                          .onClick(() => {
+                            this.store.selectCell(rowIndex, colIndex)
+                          })
+                      }
+                    } else {
+                      Stack() {
+                        Column()
+                          .width('100%')
+                          .height('100%')
+                          .backgroundColor(this.getCellColor(this.getDisplayNodeType(rowIndex, colIndex, cell)))
+                        this.ComparePathOverlay(rowIndex, colIndex, cell)
+                        this.VisualizationOverlay(rowIndex, colIndex, cell)
+                      }
+                        .width(this.getScaledCellSize())
+                        .height(this.getScaledCellSize())
+                        .border({
+                          width: this.store.params.showGridLines ? 1 : 0,
+                          color: this.store.params.gridLineColor || this.store.getColor('navix_grid_line')
+                        })
+                        .onClick(() => {
+                          if (this.algorithm !== null) {
+                            return
+                          }
+                          if (this.store.currentTool === ToolType.RANDOM) {
+                            return
+                          }
+                          this.store.applyToolAt(rowIndex, colIndex)
+                        })
+                    }
                   }, (_cell: NodeType, colIndex: number) => `${this.store.mapVersion}-${rowIndex}-${colIndex}`)
                 }
               }, (_row: NodeType[], rowIndex: number) => `${this.store.mapVersion}-${rowIndex}`)
