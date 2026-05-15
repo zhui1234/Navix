@@ -1,5 +1,5 @@
 import { NavixStore, navixStore } from '../store/NavixStore'
-import { NodeType, ToolType, MapType } from '../models/MapTypes'
+import { NodeType, ToolType, MapType, AlgorithmType } from '../models/MapTypes'
 
 const MINIMAP_SIZE: number = 120
 const MINIMAP_CELLS: number = 40
@@ -26,6 +26,7 @@ const MINIMAP_INDICES: number[] = createIndices(MINIMAP_CELLS)
 @ComponentV2
 export struct MainCanvas {
   @Local store: NavixStore = navixStore
+  @Param algorithm: AlgorithmType | null = null
   private horizontalScroller: Scroller = new Scroller()
   private verticalScroller: Scroller = new Scroller()
   @Local private painting: boolean = false
@@ -50,6 +51,229 @@ export struct MainCanvas {
       && this.store.currentTool !== null
       && this.store.currentTool !== ToolType.SELECT
       && this.store.currentTool !== ToolType.RANDOM
+      && this.algorithm === null
+  }
+
+  getDisplayNodeType(row: number, col: number, base: NodeType): NodeType {
+    if (this.algorithm === null) {
+      return base
+    }
+    return this.store.getCompareNodeType(this.algorithm, row, col, base)
+  }
+
+  getComparePathColors(row: number, col: number, base: NodeType): string[] {
+    if (this.algorithm !== null) {
+      return []
+    }
+    if (this.store.compareResults.length === 0) {
+      return []
+    }
+    if (base === NodeType.START || base === NodeType.END || base === NodeType.OBSTACLE) {
+      return []
+    }
+    const id = row * this.store.mapData.cols + col
+    const colors: string[] = []
+    for (let i = 0; i < this.store.selectedAlgorithms.length; i++) {
+      const algo = this.store.selectedAlgorithms[i]
+      const result = this.store.getCompareResult(algo)
+      if (!result) {
+        continue
+      }
+      if (id >= 0 && id < result.pathMask.length && result.pathMask[id]) {
+        colors.push(this.store.getAlgorithmPathColor(algo))
+      }
+    }
+    return colors
+  }
+
+  @Builder
+  ComparePathOverlay(row: number, col: number, base: NodeType) {
+    if (this.getComparePathColors(row, col, base).length > 0) {
+      Row({ space: 0 }) {
+        ForEach(this.getComparePathColors(row, col, base), (color: string, _idx: number) => {
+          Column()
+            .layoutWeight(1)
+            .height('100%')
+            .backgroundColor(color)
+            .opacity(0.55)
+        }, (_color: string, idx: number) => `${this.store.mapVersion}-${row}-${col}-${idx}`)
+      }
+      .width('100%')
+      .height('100%')
+    }
+  }
+
+  shouldShowLegend(): boolean {
+    return this.algorithm === null
+      && this.store.selectedAlgorithms.length > 0
+  }
+
+  formatElapsed(ms: number): string {
+    if (!Number.isFinite(ms) || ms < 0) {
+      return '0ms'
+    }
+    if (ms >= 1000) {
+      return `${(ms / 1000).toFixed(2)}s`
+    }
+    return `${Math.round(ms)}ms`
+  }
+
+  getLegendOverallStatus(): string {
+    if (!this.store.startPos || !this.store.endPos) {
+      return '未设置起点/终点'
+    }
+    if (this.store.compareResults.length === 0) {
+      return '未运行'
+    }
+    for (let i = 0; i < this.store.compareResults.length; i++) {
+      if (this.store.compareResults[i].implemented) {
+        return '已运行'
+      }
+    }
+    return '未实现'
+  }
+
+  getLegendPathText(algo: AlgorithmType): string {
+    if (!this.store.startPos || !this.store.endPos) {
+      return '-'
+    }
+    const result = this.store.getCompareResult(algo)
+    if (!result) {
+      if (algo === AlgorithmType.ASTAR || algo === AlgorithmType.DIJKSTRA) {
+        return '-'
+      }
+      return '未实现'
+    }
+    if (!result.implemented) {
+      return '未实现'
+    }
+    if (!result.found) {
+      return '无'
+    }
+    return `${result.pathLength}`
+  }
+
+  getLegendExploredText(algo: AlgorithmType): string {
+    if (!this.store.startPos || !this.store.endPos) {
+      return '-'
+    }
+    const result = this.store.getCompareResult(algo)
+    if (!result || !result.implemented) {
+      return '-'
+    }
+    return `${result.exploredCount}`
+  }
+
+  getLegendTimeText(algo: AlgorithmType): string {
+    if (!this.store.startPos || !this.store.endPos) {
+      return '-'
+    }
+    const result = this.store.getCompareResult(algo)
+    if (!result || !result.implemented) {
+      return '-'
+    }
+    return this.formatElapsed(result.elapsedMs)
+  }
+
+  @Builder
+  LegendOverlay() {
+    if (this.shouldShowLegend()) {
+      Column({ space: 8 }) {
+        Row() {
+          Text('路径图例')
+            .fontSize(12)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(this.store.getColor('navix_text_primary'))
+
+          Blank()
+
+          Text(this.getLegendOverallStatus())
+            .fontSize(10)
+            .fontColor(this.store.getColor('navix_text_secondary'))
+        }
+        .width('100%')
+
+        Row() {
+          Text('算法')
+            .fontSize(10)
+            .fontColor(this.store.getColor('navix_text_secondary'))
+            .layoutWeight(1)
+
+          Text('路径')
+            .fontSize(10)
+            .fontColor(this.store.getColor('navix_text_secondary'))
+            .width(42)
+            .textAlign(TextAlign.Center)
+
+          Text('探索')
+            .fontSize(10)
+            .fontColor(this.store.getColor('navix_text_secondary'))
+            .width(52)
+            .textAlign(TextAlign.Center)
+
+          Text('时间')
+            .fontSize(10)
+            .fontColor(this.store.getColor('navix_text_secondary'))
+            .width(56)
+            .textAlign(TextAlign.Center)
+        }
+        .width('100%')
+
+        Divider()
+          .color(this.store.getColor('navix_border_color'))
+
+        ForEach(this.store.selectedAlgorithms, (algo: AlgorithmType) => {
+          Column({ space: 6 }) {
+            Row({ space: 8 }) {
+              Row({ space: 6 }) {
+                Column()
+                  .width(10)
+                  .height(10)
+                  .borderRadius(2)
+                  .backgroundColor(this.store.getAlgorithmPathColor(algo))
+
+                Text(this.store.getAlgorithmName(algo))
+                  .fontSize(11)
+                  .fontColor(this.store.getColor('navix_text_primary'))
+              }
+              .layoutWeight(1)
+
+              Text(this.getLegendPathText(algo))
+                .fontSize(11)
+                .fontColor(this.store.getColor('navix_text_primary'))
+                .width(42)
+                .textAlign(TextAlign.Center)
+
+              Text(this.getLegendExploredText(algo))
+                .fontSize(11)
+                .fontColor(this.store.getColor('navix_text_primary'))
+                .width(52)
+                .textAlign(TextAlign.Center)
+
+              Text(this.getLegendTimeText(algo))
+                .fontSize(11)
+                .fontColor(this.store.getColor('navix_text_primary'))
+                .width(56)
+                .textAlign(TextAlign.Center)
+            }
+            .width('100%')
+
+            Divider()
+              .color(this.store.getColor('navix_border_color'))
+          }
+          .width('100%')
+        }, (algo: AlgorithmType) => `${algo}`)
+      }
+      .alignItems(HorizontalAlign.Start)
+      .width(260)
+      .padding(10)
+      .borderRadius(6)
+      .border({ width: 1, color: this.store.getColor('navix_border_color') })
+      .backgroundColor(this.store.getColor('navix_bg_canvas'))
+      .shadow({ radius: 12, color: '#33000000', offsetX: 0, offsetY: 4 })
+      .clip(true)
+      .position({ x: MINIMAP_MARGIN, y: MINIMAP_MARGIN })
+    }
   }
 
   applyAtPoint(x: number, y: number): void {
@@ -214,16 +438,23 @@ export struct MainCanvas {
               ForEach(this.store.mapData.grid, (row: NodeType[], rowIndex: number) => {
                 Row({ space: 0 }) {
                   ForEach(row, (cell: NodeType, colIndex: number) => {
-                    Column()
+                    Stack() {
+                      Column()
+                        .width('100%')
+                        .height('100%')
+                        .backgroundColor(this.getCellColor(this.getDisplayNodeType(rowIndex, colIndex, cell)))
+                      this.ComparePathOverlay(rowIndex, colIndex, cell)
+                    }
                       .width(this.getScaledCellSize())
                       .height(this.getScaledCellSize())
-                      .backgroundColor(this.getCellColor(cell))
                       .border({
                         width: this.store.params.showGridLines ? 1 : 0,
                         color: this.store.params.gridLineColor || this.store.getColor('navix_grid_line')
                       })
                       .onClick(() => {
-                        this.store.applyToolAt(rowIndex, colIndex)
+                        if (this.algorithm === null) {
+                          this.store.applyToolAt(rowIndex, colIndex)
+                        }
                       })
                   }, (_cell: NodeType, colIndex: number) => `${this.store.mapVersion}-${rowIndex}-${colIndex}`)
                 }
@@ -281,66 +512,70 @@ export struct MainCanvas {
           .height(10)
           .position({ bottom: 0 })
 
-        Stack() {
-          Column({ space: 0 }) {
-            ForEach(MINIMAP_INDICES, (r: number) => {
-              Row({ space: 0 }) {
-                ForEach(MINIMAP_INDICES, (c: number) => {
-                  Column()
-                    .width(MINIMAP_SIZE / MINIMAP_CELLS)
-                    .height(MINIMAP_SIZE / MINIMAP_CELLS)
-                    .backgroundColor(this.getMinimapCellColorAt(r, c))
-                }, (_: number, idx: number) => `${this.store.mapVersion}-${r}-${idx}`)
-              }
-            }, (item: number) => `${this.store.mapVersion}-${item}`)
-          }
+        this.LegendOverlay()
 
-          Column()
-            .width(this.getMinimapViewRect().w)
-            .height(this.getMinimapViewRect().h)
-            .position({ x: this.getMinimapViewRect().x, y: this.getMinimapViewRect().y })
-            .border({ width: 1, color: this.store.getColor('navix_accent_highlight') })
-            .backgroundColor(Color.Transparent)
-        }
-        .width(MINIMAP_SIZE)
-        .height(MINIMAP_SIZE)
-        .borderRadius(6)
-        .border({ width: 1, color: this.store.getColor('navix_border_color') })
-        .backgroundColor(this.store.getColor('navix_bg_canvas'))
-        .shadow({ radius: 12, color: '#33000000', offsetX: 0, offsetY: 4 })
-        .clip(true)
-        .position({ x: this.minimapX, y: this.minimapY })
-        .gesture(
-          GestureGroup(GestureMode.Exclusive,
-            PanGesture({ direction: PanDirection.All, distance: 1 })
-              .onActionStart((_event?: GestureEvent) => {
-                this.minimapDragging = true
-                this.minimapDragStartX = this.minimapX
-                this.minimapDragStartY = this.minimapY
-              })
-              .onActionUpdate((event?: GestureEvent) => {
-                if (!event) {
-                  return
+        if (this.algorithm === null) {
+          Stack() {
+            Column({ space: 0 }) {
+              ForEach(MINIMAP_INDICES, (r: number) => {
+                Row({ space: 0 }) {
+                  ForEach(MINIMAP_INDICES, (c: number) => {
+                    Column()
+                      .width(MINIMAP_SIZE / MINIMAP_CELLS)
+                      .height(MINIMAP_SIZE / MINIMAP_CELLS)
+                      .backgroundColor(this.getMinimapCellColorAt(r, c))
+                  }, (_: number, idx: number) => `${this.store.mapVersion}-${r}-${idx}`)
                 }
-                this.minimapX = this.minimapDragStartX + event.offsetX
-                this.minimapY = this.minimapDragStartY + event.offsetY
-                this.clampMinimapPosition()
-              })
-              .onActionEnd((_event?: GestureEvent) => {
-                this.minimapDragging = false
-              }),
-            TapGesture({ count: 1, fingers: 1 })
-              .onAction((event?: GestureEvent) => {
-                if (!event || !event.tapLocation) {
-                  return
-                }
-                if (this.minimapDragging) {
-                  return
-                }
-                this.jumpToMinimapPoint(event.tapLocation.x, event.tapLocation.y)
-              })
+              }, (item: number) => `${this.store.mapVersion}-${item}`)
+            }
+
+            Column()
+              .width(this.getMinimapViewRect().w)
+              .height(this.getMinimapViewRect().h)
+              .position({ x: this.getMinimapViewRect().x, y: this.getMinimapViewRect().y })
+              .border({ width: 1, color: this.store.getColor('navix_accent_highlight') })
+              .backgroundColor(Color.Transparent)
+          }
+          .width(MINIMAP_SIZE)
+          .height(MINIMAP_SIZE)
+          .borderRadius(6)
+          .border({ width: 1, color: this.store.getColor('navix_border_color') })
+          .backgroundColor(this.store.getColor('navix_bg_canvas'))
+          .shadow({ radius: 12, color: '#33000000', offsetX: 0, offsetY: 4 })
+          .clip(true)
+          .position({ x: this.minimapX, y: this.minimapY })
+          .gesture(
+            GestureGroup(GestureMode.Exclusive,
+              PanGesture({ direction: PanDirection.All, distance: 1 })
+                .onActionStart((_event?: GestureEvent) => {
+                  this.minimapDragging = true
+                  this.minimapDragStartX = this.minimapX
+                  this.minimapDragStartY = this.minimapY
+                })
+                .onActionUpdate((event?: GestureEvent) => {
+                  if (!event) {
+                    return
+                  }
+                  this.minimapX = this.minimapDragStartX + event.offsetX
+                  this.minimapY = this.minimapDragStartY + event.offsetY
+                  this.clampMinimapPosition()
+                })
+                .onActionEnd((_event?: GestureEvent) => {
+                  this.minimapDragging = false
+                }),
+              TapGesture({ count: 1, fingers: 1 })
+                .onAction((event?: GestureEvent) => {
+                  if (!event || !event.tapLocation) {
+                    return
+                  }
+                  if (this.minimapDragging) {
+                    return
+                  }
+                  this.jumpToMinimapPoint(event.tapLocation.x, event.tapLocation.y)
+                })
+            )
           )
-        )
+        }
       }
       .width('100%')
       .height('100%')

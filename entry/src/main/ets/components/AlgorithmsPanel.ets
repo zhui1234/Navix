@@ -20,6 +20,11 @@ export struct AlgorithmsPanel {
 
         Blank()
 
+        Text(`${this.store.selectedAlgorithms.length}/3`)
+          .fontSize(11)
+          .fontColor(this.store.getColor('navix_text_secondary'))
+          .margin({ right: 8 })
+
         SymbolGlyph($r('sys.symbol.minus'))
           .fontSize(14)
           .fontColor([this.store.getColor('navix_icon_color')])
@@ -98,13 +103,17 @@ export struct AlgorithmsPanel {
     .alignItems(HorizontalAlign.Start)
   }
 
+  isSelected(algo: AlgorithmType): boolean {
+    return this.store.selectedAlgorithms.indexOf(algo) >= 0
+  }
+
   @Builder
   AlgorithmButton(algo: AlgorithmType, name: string, hint: string) {
     Column({ space: 2 }) {
       Text(name)
         .fontSize(12)
         .fontColor(this.store.getColor('navix_text_primary'))
-        .fontWeight(this.store.currentAlgorithm === algo ? FontWeight.Medium : FontWeight.Normal)
+        .fontWeight(this.isSelected(algo) ? FontWeight.Medium : FontWeight.Normal)
 
       if (this.hoveredAlgorithm === algo) {
         Text(hint)
@@ -116,12 +125,12 @@ export struct AlgorithmsPanel {
     .width('100%')
     .padding({ left: 10, right: 10, top: 7, bottom: 7 })
     .borderRadius(6)
-    .backgroundColor(this.store.currentAlgorithm === algo ? this.store.getColor('navix_button_active') : (this.hoveredAlgorithm === algo ? this.store.getColor('navix_border_color') : Color.Transparent))
+    .backgroundColor(this.isSelected(algo) ? this.store.getColor('navix_button_active') : (this.hoveredAlgorithm === algo ? this.store.getColor('navix_border_color') : Color.Transparent))
     .onHover((isHover: boolean) => {
       this.hoveredAlgorithm = isHover ? algo : null
     })
     .onClick(() => {
-      this.store.setAlgorithm(algo)
+      this.store.toggleCompareAlgorithm(algo)
     })
   }
 }

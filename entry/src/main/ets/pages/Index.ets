@@ -20,7 +20,13 @@ struct Index {
 
   @Computed
   get rightPanelWidth(): number {
-    return this.store.rightPanelState === RightPanelState.COLLAPSED ? 0 : 200
+    if (this.store.rightPanelState === RightPanelState.COLLAPSED) {
+      return 0
+    }
+    if (this.store.rightPanelState === RightPanelState.VISUALIZATION) {
+      return 420
+    }
+    return 200
   }
   build() {
     Column() {
@@ -35,7 +41,9 @@ struct Index {
         .width(this.leftPanelWidth)
         .height('100%')
 
-        MainCanvas()
+        MainCanvas({ algorithm: null })
+          .layoutWeight(1)
+          .height('100%')
 
         Column() {
           RightPanel()

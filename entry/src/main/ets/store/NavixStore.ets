@@ -10,11 +10,40 @@ import {
   NavixParams,
   HeatmapConfig
 } from '../models/MapTypes'
+import { GridMapFromMapData, PathfindingOptions, PathfindingResult } from '../algorithms/PathfindingTypes'
+import { AStarPathfinder } from '../algorithms/AStar'
+import { DijkstraPathfinder } from '../algorithms/Dijkstra'
+
+export class AlgorithmCompareResult {
+  algo: AlgorithmType
+  implemented: boolean
+  found: boolean
+  cost: number
+  exploredCount: number
+  pathLength: number
+  elapsedMs: number
+  exploredMask: boolean[]
+  pathMask: boolean[]
+
+  constructor(algo: AlgorithmType, implemented: boolean, found: boolean, cost: number, exploredCount: number, pathLength: number, elapsedMs: number, exploredMask: boolean[], pathMask: boolean[]) {
+    this.algo = algo
+    this.implemented = implemented
+    this.found = found
+    this.cost = cost
+    this.exploredCount = exploredCount
+    this.pathLength = pathLength
+    this.elapsedMs = elapsedMs
+    this.exploredMask = exploredMask
+    this.pathMask = pathMask
+  }
+}
 
 @ObservedV2
 export class NavixStore {
   @Trace currentTool: ToolType | null = null
   @Trace currentAlgorithm: AlgorithmType | null = null
+  @Trace selectedAlgorithms: AlgorithmType[] = []
+  @Trace compareResults: AlgorithmCompareResult[] = []
   @Trace currentMapType: MapType = MapType.GRID
 
   @Trace leftPanelState: LeftPanelState = LeftPanelState.COLLAPSED
@@ -81,6 +110,180 @@ export class NavixStore {
     }
   }
 
+  toggleCompareAlgorithm(algo: AlgorithmType): void {
+    const prev = this.selectedAlgorithms
+    const idx = prev.indexOf(algo)
+    if (idx >= 0) {
+      const next: AlgorithmType[] = []
+      for (let i = 0; i < prev.length; i++) {
+        if (i !== idx) {
+          next.push(prev[i])
+        }
+      }
+      this.selectedAlgorithms = next
+      this.compareResults = []
+      return
+    }
+    if (prev.length >= 3) {
+      this.statusText = '最多选择3个算法'
+      return
+    }
+    const next: AlgorithmType[] = []
+    for (let i = 0; i < prev.length; i++) {
+      next.push(prev[i])
+    }
+    next.push(algo)
+    this.selectedAlgorithms = next
+    this.compareResults = []
+  }
+
+  getCompareResult(algo: AlgorithmType): AlgorithmCompareResult | null {
+    for (let i = 0; i < this.compareResults.length; i++) {
+      const r = this.compareResults[i]
+      if (r.algo === algo) {
+        return r
+      }
+    }
+    return null
+  }
+
+  getAlgorithmName(algo: AlgorithmType): string {
+    if (algo === AlgorithmType.ASTAR) {
+      return 'A*'
+    }
+    if (algo === AlgorithmType.DIJKSTRA) {
+      return 'Dijkstra'
+    }
+    if (algo === AlgorithmType.BFS) {
+      return 'BFS'
+    }
+    if (algo === AlgorithmType.DFS) {
+      return 'DFS'
+    }
+    if (algo === AlgorithmType.GREEDY_BFS) {
+      return '贪心BFS'
+    }
+    if (algo === AlgorithmType.JPS) {
+      return 'JPS'
+    }
+    if (algo === AlgorithmType.DSTAR_LITE) {
+      return 'D* Lite'
+    }
+    if (algo === AlgorithmType.THETA_STAR) {
+      return 'Theta*'
+    }
+    if (algo === AlgorithmType.RRT) {
+      return 'RRT'
+    }
+    if (algo === AlgorithmType.PRM) {
+      return 'PRM'
+    }
+    return `${algo}`
+  }
+
+  getAlgorithmPathColor(algo: AlgorithmType): string {
+    if (algo === AlgorithmType.ASTAR) {
+      return '#3B82F6'
+    }
+    if (algo === AlgorithmType.DIJKSTRA) {
+      return '#F97316'
+    }
+    if (algo === AlgorithmType.BFS) {
+      return '#22C55E'
+    }
+    if (algo === AlgorithmType.DFS) {
+      return '#A855F7'
+    }
+    return '#64748B'
+  }
+
+  runCompare(): void {
+    if (this.currentMapType !== MapType.GRID) {
+      this.statusText = '当前仅支持栅格图对比'
+      return
+    }
+    if (this.selectedAlgorithms.length === 0) {
+      this.statusText = '请选择算法'
+      return
+    }
+    if (!this.startPos || !this.endPos) {
+      this.statusText = '请先设置起点与终点'
+      return
+    }
+
+    const map = new GridMapFromMapData(this.mapData)
+    const opts: PathfindingOptions = {
+      allowDiagonal: this.params.allowDiagonal,
+      heuristicType: this.params.heuristicType,
+      heuristicWeight: this.params.heuristicWeight
+    }
+
+    const n = this.mapData.rows * this.mapData.cols
+    const results: AlgorithmCompareResult[] = []
+
+    for (let i = 0; i < this.selectedAlgorithms.length; i++) {
+      const algo = this.selectedAlgorithms[i]
+      let res: PathfindingResult | null = null
+      let elapsedMs: number = 0
+      if (algo === AlgorithmType.ASTAR) {
+        const t0 = Date.now()
+        res = new AStarPathfinder().findPath(map, this.startPos, this.endPos, opts)
+        elapsedMs = Date.now() - t0
+      } else if (algo === AlgorithmType.DIJKSTRA) {
+        const t0 = Date.now()
+        res = new DijkstraPathfinder().findPath(map, this.startPos, this.endPos, opts)
+        elapsedMs = Date.now() - t0
+      } else {
+        results.push(new AlgorithmCompareResult(algo, false, false, 0, 0, 0, 0, new Array<boolean>(n).fill(false), new Array<boolean>(n).fill(false)))
+        continue
+      }
+
+      const exploredMask: boolean[] = new Array<boolean>(n).fill(false)
+      const pathMask: boolean[] = new Array<boolean>(n).fill(false)
+
+      for (let k = 0; k < res.explored.length; k++) {
+        const p = res.explored[k]
+        const id = p.row * this.mapData.cols + p.col
+        if (id >= 0 && id < n) {
+          exploredMask[id] = true
+        }
+      }
+      for (let k = 0; k < res.path.length; k++) {
+        const p = res.path[k]
+        const id = p.row * this.mapData.cols + p.col
+        if (id >= 0 && id < n) {
+          pathMask[id] = true
+        }
+      }
+
+      results.push(new AlgorithmCompareResult(algo, true, res.found, res.cost, res.explored.length, res.path.length, elapsedMs, exploredMask, pathMask))
+    }
+
+    this.compareResults = results
+    this.statusText = '对比完成'
+  }
+
+  getCompareNodeType(algo: AlgorithmType, row: number, col: number, base: NodeType): NodeType {
+    const result = this.getCompareResult(algo)
+    if (!result) {
+      return base
+    }
+    if (base === NodeType.START || base === NodeType.END || base === NodeType.OBSTACLE) {
+      return base
+    }
+    const id = row * this.mapData.cols + col
+    if (id < 0 || id >= result.pathMask.length) {
+      return base
+    }
+    if (result.pathMask[id]) {
+      return NodeType.PATH
+    }
+    if (result.exploredMask[id]) {
+      return NodeType.EXPLORED
+    }
+    return base
+  }
+
   setCanvasZoomPercent(percent: number): void {
     const safePercent = percent < 10 ? 10 : (percent > 300 ? 300 : percent)
     this.canvasZoomPercent = safePercent
@@ -143,11 +346,18 @@ export class NavixStore {
     this.endPos = pos
   }
 
+  markMapChanged(): void {
+    this.mapVersion++
+    if (this.compareResults.length > 0) {
+      this.compareResults = []
+    }
+  }
+
   updateCell(row: number, col: number, type: NodeType): void {
     if (row >= 0 && row < this.mapData.rows && col >= 0 && col < this.mapData.cols) {
       if (this.mapData.grid[row][col] !== type) {
         this.mapData.grid[row][col] = type
-        this.mapVersion++
+        this.markMapChanged()
       }
     }
   }
@@ -218,7 +428,7 @@ export class NavixStore {
 
   updateMapData(data: MapData): void {
     this.mapData = data
-    this.mapVersion++
+    this.markMapChanged()
   }
 
   resetSearchState(): void {
@@ -264,14 +474,14 @@ export class NavixStore {
         this.mapData.grid[i][j] = Math.random() < obstacleDensity ? NodeType.OBSTACLE : NodeType.EMPTY
       }
     }
-    this.mapVersion++
+    this.markMapChanged()
   }
 
   resizeMap(rows: number, cols: number): void {
     const safeRows = rows > 0 ? rows : 20
     const safeCols = cols > 0 ? cols : 20
     this.mapData = this.createEmptyMap(safeRows, safeCols)
-    this.mapVersion++
+    this.markMapChanged()
     this.updateParams({ gridRows: safeRows, gridCols: safeCols })
     this.statusText = `地图大小: ${safeCols}×${safeRows}`
   }
@@ -280,7 +490,7 @@ export class NavixStore {
     const safeRows = rows > 0 ? rows : 20
     const safeCols = cols > 0 ? cols : 20
     this.mapData = this.createEmptyMap(safeRows, safeCols)
-    this.mapVersion++
+    this.markMapChanged()
     this.updateParams({ gridRows: safeRows, gridCols: safeCols })
   }
 
@@ -317,7 +527,7 @@ export class NavixStore {
     const startY = 1
     carve(startX, startY)
     this.mapData = { grid, rows: safeRows, cols: safeCols }
-    this.mapVersion++
+    this.markMapChanged()
     this.updateParams({ gridRows: safeRows, gridCols: safeCols })
   }
 
@@ -365,7 +575,7 @@ export class NavixStore {
     }
 
     this.mapData = { grid, rows: safeRows, cols: safeCols }
-    this.mapVersion++
+    this.markMapChanged()
     this.updateParams({ gridRows: safeRows, gridCols: safeCols })
   }
 
@@ -396,7 +606,7 @@ export class NavixStore {
     }
 
     this.mapData = { grid, rows: safeRows, cols: safeCols }
-    this.mapVersion++
+    this.markMapChanged()
     this.updateParams({ gridRows: safeRows, gridCols: safeCols })
   }
 
@@ -404,7 +614,6 @@ export class NavixStore {
     const safeRows = rows > 0 ? rows : 20
     const safeCols = cols > 0 ? cols : 20
     this.mapData = this.createEmptyMap(safeRows, safeCols)
-    this.mapVersion++
     this.updateParams({ gridRows: safeRows, gridCols: safeCols })
     this.generateRandomObstacles()
   }
@@ -413,7 +622,6 @@ export class NavixStore {
     const safeRows = rows > 0 ? rows : 20
     const safeCols = cols > 0 ? cols : 20
     this.mapData = this.createEmptyMap(safeRows, safeCols)
-    this.mapVersion++
     this.updateParams({ gridRows: safeRows, gridCols: safeCols })
     
     for (let i = 0; i < safeRows; i++) {
@@ -423,13 +631,13 @@ export class NavixStore {
         }
       }
     }
+    this.markMapChanged()
   }
 
   generate2D5Map(rows: number = this.mapData.rows, cols: number = this.mapData.cols): void {
     const safeRows = rows > 0 ? rows : 20
     const safeCols = cols > 0 ? cols : 20
     this.mapData = this.createEmptyMap(safeRows, safeCols)
-    this.mapVersion++
     this.updateParams({ gridRows: safeRows, gridCols: safeCols })
     
     for (let i = 0; i < safeRows; i++) {
@@ -440,13 +648,13 @@ export class NavixStore {
         }
       }
     }
+    this.markMapChanged()
   }
 
   generate3DMap(rows: number = this.mapData.rows, cols: number = this.mapData.cols): void {
     const safeRows = rows > 0 ? rows : 20
     const safeCols = cols > 0 ? cols : 20
     this.mapData = this.createEmptyMap(safeRows, safeCols)
-    this.mapVersion++
     this.updateParams({ gridRows: safeRows, gridCols: safeCols })
     
     for (let i = 0; i < safeRows; i++) {
@@ -457,6 +665,7 @@ export class NavixStore {
         }
       }
     }
+    this.markMapChanged()
   }
 
   toggleTheme(): void {

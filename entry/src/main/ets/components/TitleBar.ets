@@ -30,6 +30,9 @@ export struct TitleBar {
         SymbolGlyph($r('sys.symbol.play_fill'))
           .fontSize(18)
           .fontColor([this.store.getColor('navix_icon_color')])
+          .onClick(() => {
+            this.store.runCompare()
+          })
         SymbolGlyph($r('sys.symbol.forward_end_fill'))
           .fontSize(18)
           .fontColor([this.store.getColor('navix_icon_color')])
