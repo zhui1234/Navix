@@ -145,7 +145,74 @@ export class NavixStore {
 
   updateCell(row: number, col: number, type: NodeType): void {
     if (row >= 0 && row < this.mapData.rows && col >= 0 && col < this.mapData.cols) {
-      this.mapData.grid[row][col] = type
+      if (this.mapData.grid[row][col] !== type) {
+        this.mapData.grid[row][col] = type
+        this.mapVersion++
+      }
+    }
+  }
+
+  applyToolAt(row: number, col: number): void {
+    if (this.currentMapType !== MapType.GRID) {
+      return
+    }
+    if (this.currentTool === null || this.currentTool === ToolType.SELECT || this.currentTool === ToolType.RANDOM) {
+      return
+    }
+    if (row < 0 || row >= this.mapData.rows || col < 0 || col >= this.mapData.cols) {
+      return
+    }
+
+    const cur = this.mapData.grid[row][col]
+    const normalized = (cur === NodeType.PATH || cur === NodeType.EXPLORED) ? NodeType.EMPTY : cur
+
+    if (this.currentTool === ToolType.START) {
+      if (this.endPos && this.endPos.row === row && this.endPos.col === col) {
+        this.endPos = null
+      }
+      if (this.startPos) {
+        if (!(this.startPos.row === row && this.startPos.col === col)) {
+          this.updateCell(this.startPos.row, this.startPos.col, NodeType.EMPTY)
+        }
+      }
+      this.startPos = { row, col }
+      this.updateCell(row, col, NodeType.START)
+      return
+    }
+
+    if (this.currentTool === ToolType.END) {
+      if (this.startPos && this.startPos.row === row && this.startPos.col === col) {
+        this.startPos = null
+      }
+      if (this.endPos) {
+        if (!(this.endPos.row === row && this.endPos.col === col)) {
+          this.updateCell(this.endPos.row, this.endPos.col, NodeType.EMPTY)
+        }
+      }
+      this.endPos = { row, col }
+      this.updateCell(row, col, NodeType.END)
+      return
+    }
+
+    if (this.currentTool === ToolType.OBSTACLE) {
+      if (normalized === NodeType.START) {
+        this.startPos = null
+      }
+      if (normalized === NodeType.END) {
+        this.endPos = null
+      }
+      this.updateCell(row, col, NodeType.OBSTACLE)
+      return
+    }
+
+    if (this.currentTool === ToolType.ERASER) {
+      if (normalized === NodeType.START) {
+        this.startPos = null
+      }
+      if (normalized === NodeType.END) {
+        this.endPos = null
+      }
+      this.updateCell(row, col, NodeType.EMPTY)
     }
   }
 
@@ -190,11 +257,14 @@ export class NavixStore {
     const obstacleDensity = 0.25
     for (let i = 0; i < this.mapData.rows; i++) {
       for (let j = 0; j < this.mapData.cols; j++) {
-        if (Math.random() < obstacleDensity) {
-          this.mapData.grid[i][j] = NodeType.OBSTACLE
+        const cur = this.mapData.grid[i][j]
+        if (cur === NodeType.START || cur === NodeType.END) {
+          continue
         }
+        this.mapData.grid[i][j] = Math.random() < obstacleDensity ? NodeType.OBSTACLE : NodeType.EMPTY
       }
     }
+    this.mapVersion++
   }
 
   resizeMap(rows: number, cols: number): void {
