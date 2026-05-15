@@ -6,6 +6,8 @@ import {
   RightPanelState,
   ToolType,
   AlgorithmType,
+  AlgorithmSpec,
+  HeuristicType,
   MapType,
   NavixParams,
   HeatmapConfig,
@@ -20,7 +22,7 @@ import { GreedyBFSPathfinder } from '../algorithms/GreedyBFS'
 import { IDAStarPathfinder } from '../algorithms/IDAStar'
 
 export class AlgorithmCompareResult {
-  algo: AlgorithmType
+  algoId: string
   implemented: boolean
   found: boolean
   cost: number
@@ -30,8 +32,8 @@ export class AlgorithmCompareResult {
   exploredMask: boolean[]
   pathMask: boolean[]
 
-  constructor(algo: AlgorithmType, implemented: boolean, found: boolean, cost: number, exploredCount: number, pathLength: number, elapsedMs: number, exploredMask: boolean[], pathMask: boolean[]) {
-    this.algo = algo
+  constructor(algoId: string, implemented: boolean, found: boolean, cost: number, exploredCount: number, pathLength: number, elapsedMs: number, exploredMask: boolean[], pathMask: boolean[]) {
+    this.algoId = algoId
     this.implemented = implemented
     this.found = found
     this.cost = cost
@@ -47,7 +49,7 @@ export class AlgorithmCompareResult {
 export class NavixStore {
   @Trace currentTool: ToolType | null = null
   @Trace currentAlgorithm: AlgorithmType | null = null
-  @Trace selectedAlgorithms: AlgorithmType[] = []
+  @Trace selectedAlgorithms: AlgorithmSpec[] = []
   @Trace compareResults: AlgorithmCompareResult[] = []
   @Trace currentMapType: MapType = MapType.GRID
 
@@ -88,8 +90,9 @@ export class NavixStore {
   @Trace searchSteps: GridPos[][] = []
   @Trace currentStep: number = 0
   @Trace obstacleCount: number = 0
+  @Trace idaStarWeights: number[] = [0.5, 1.0, 1.5, 2.0]
   @Trace visualizationMode: VisualizationMode = VisualizationMode.NONE
-  @Trace visualizationAlgorithm: AlgorithmType | null = null
+  @Trace visualizationAlgorithmId: string | null = null
   @Trace visualizationClosedMask: boolean[] = []
   @Trace visualizationPathMask: boolean[] = []
   @Trace visualizationCurrentId: number = -1
@@ -162,11 +165,81 @@ export class NavixStore {
     }
   }
 
-  toggleCompareAlgorithm(algo: AlgorithmType): void {
+  formatHeuristicName(type: HeuristicType): string {
+    if (type === 'manhattan') {
+      return 'Manhattan'
+    }
+    if (type === 'euclidean') {
+      return 'Euclidean'
+    }
+    if (type === 'chebyshev') {
+      return 'Chebyshev'
+    }
+    return 'Octile'
+  }
+
+  formatWeight(weight: number): string {
+    if (!Number.isFinite(weight)) {
+      return '1.00'
+    }
+    return weight.toFixed(2)
+  }
+
+  createAStarSpec(heuristicType: HeuristicType): AlgorithmSpec {
+    return { id: `astar-${heuristicType}`, type: AlgorithmType.ASTAR, heuristicType: heuristicType }
+  }
+
+  createIDAStarSpec(weight: number): AlgorithmSpec {
+    const w = this.formatWeight(weight)
+    return { id: `ida-${w}`, type: AlgorithmType.IDA_STAR, weight: Number(w) }
+  }
+
+  createSimpleSpec(type: AlgorithmType): AlgorithmSpec {
+    return { id: `algo-${type}`, type: type }
+  }
+
+  addIDAStarWeight(weight: number): void {
+    if (!Number.isFinite(weight) || weight <= 0 || weight > 10) {
+      this.statusText = '权重范围: (0, 10]'
+      return
+    }
+    const w = Number(this.formatWeight(weight))
+    const prev = this.idaStarWeights
+    for (let i = 0; i < prev.length; i++) {
+      if (Math.abs(prev[i] - w) < 1e-6) {
+        return
+      }
+    }
+    const next: number[] = []
+    for (let i = 0; i < prev.length; i++) {
+      next.push(prev[i])
+    }
+    next.push(w)
+    next.sort((a: number, b: number) => a - b)
+    this.idaStarWeights = next
+  }
+
+  isSelectedAlgorithm(spec: AlgorithmSpec): boolean {
     const prev = this.selectedAlgorithms
-    const idx = prev.indexOf(algo)
+    for (let i = 0; i < prev.length; i++) {
+      if (prev[i].id === spec.id) {
+        return true
+      }
+    }
+    return false
+  }
+
+  toggleCompareAlgorithm(spec: AlgorithmSpec): void {
+    const prev = this.selectedAlgorithms
+    let idx = -1
+    for (let i = 0; i < prev.length; i++) {
+      if (prev[i].id === spec.id) {
+        idx = i
+        break
+      }
+    }
     if (idx >= 0) {
-      const next: AlgorithmType[] = []
+      const next: AlgorithmSpec[] = []
       for (let i = 0; i < prev.length; i++) {
         if (i !== idx) {
           next.push(prev[i])
@@ -180,23 +253,35 @@ export class NavixStore {
       this.statusText = '最多选择3个算法'
       return
     }
-    const next: AlgorithmType[] = []
+    const next: AlgorithmSpec[] = []
     for (let i = 0; i < prev.length; i++) {
       next.push(prev[i])
     }
-    next.push(algo)
+    next.push(spec)
     this.selectedAlgorithms = next
     this.compareResults = []
   }
 
-  getCompareResult(algo: AlgorithmType): AlgorithmCompareResult | null {
+  getCompareResult(algoId: string): AlgorithmCompareResult | null {
     for (let i = 0; i < this.compareResults.length; i++) {
       const r = this.compareResults[i]
-      if (r.algo === algo) {
+      if (r.algoId === algoId) {
         return r
       }
     }
     return null
+  }
+
+  getAlgorithmLabel(spec: AlgorithmSpec): string {
+    if (spec.type === AlgorithmType.ASTAR) {
+      const h = spec.heuristicType ? this.formatHeuristicName(spec.heuristicType) : this.formatHeuristicName(this.params.heuristicType)
+      return `A* (${h})`
+    }
+    if (spec.type === AlgorithmType.IDA_STAR) {
+      const w = spec.weight !== undefined ? this.formatWeight(spec.weight) : this.formatWeight(this.params.heuristicWeight)
+      return `IDA* (w=${w})`
+    }
+    return this.getAlgorithmName(spec.type)
   }
 
   getAlgorithmName(algo: AlgorithmType): string {
@@ -233,26 +318,54 @@ export class NavixStore {
     return `${algo}`
   }
 
-  getAlgorithmPathColor(algo: AlgorithmType): string {
-    if (algo === AlgorithmType.ASTAR) {
-      return '#3B82F6'
+  private colorHash(id: string): number {
+    let h = 0
+    for (let i = 0; i < id.length; i++) {
+      h = (h * 31 + id.charCodeAt(i)) >>> 0
     }
-    if (algo === AlgorithmType.DIJKSTRA) {
+    return h
+  }
+
+  getAlgorithmPathColor(spec: AlgorithmSpec): string {
+    if (spec.type === AlgorithmType.ASTAR) {
+      if (spec.heuristicType === 'manhattan') {
+        return '#3B82F6'
+      }
+      if (spec.heuristicType === 'euclidean') {
+        return '#0EA5E9'
+      }
+      if (spec.heuristicType === 'chebyshev') {
+        return '#6366F1'
+      }
+      return '#2563EB'
+    }
+    if (spec.type === AlgorithmType.DIJKSTRA) {
       return '#F97316'
     }
-    if (algo === AlgorithmType.BFS) {
+    if (spec.type === AlgorithmType.BFS) {
       return '#22C55E'
     }
-    if (algo === AlgorithmType.DFS) {
+    if (spec.type === AlgorithmType.DFS) {
       return '#A855F7'
     }
-    if (algo === AlgorithmType.GREEDY_BFS) {
+    if (spec.type === AlgorithmType.GREEDY_BFS) {
       return '#14B8A6'
     }
-    if (algo === AlgorithmType.IDA_STAR) {
-      return '#EF4444'
+    if (spec.type === AlgorithmType.IDA_STAR) {
+      const palette: string[] = ['#EF4444', '#DC2626', '#F43F5E', '#FB7185', '#E11D48']
+      return palette[this.colorHash(spec.id) % palette.length]
     }
     return '#64748B'
+  }
+
+  getAlgorithmSpecById(id: string): AlgorithmSpec | null {
+    for (let i = 0; i < this.selectedAlgorithms.length; i++) {
+      const s = this.selectedAlgorithms[i]
+      if (s.id === id) {
+        return s
+      }
+    }
+    return null
   }
 
   runCompare(): void {
@@ -270,45 +383,48 @@ export class NavixStore {
     }
 
     const map = new GridMapFromMapData(this.mapData)
-    const opts: PathfindingOptions = {
-      allowDiagonal: this.params.allowDiagonal,
-      heuristicType: this.params.heuristicType,
-      heuristicWeight: this.params.heuristicWeight
-    }
 
     const n = this.mapData.rows * this.mapData.cols
     const results: AlgorithmCompareResult[] = []
 
     for (let i = 0; i < this.selectedAlgorithms.length; i++) {
-      const algo = this.selectedAlgorithms[i]
+      const spec = this.selectedAlgorithms[i]
       let res: PathfindingResult | null = null
       let elapsedMs: number = 0
-      if (algo === AlgorithmType.ASTAR) {
+      const heuristicType = spec.type === AlgorithmType.ASTAR && spec.heuristicType ? spec.heuristicType : this.params.heuristicType
+      const heuristicWeight = spec.type === AlgorithmType.IDA_STAR && spec.weight !== undefined ? spec.weight : this.params.heuristicWeight
+      const opts: PathfindingOptions = {
+        allowDiagonal: this.params.allowDiagonal,
+        heuristicType: heuristicType,
+        heuristicWeight: heuristicWeight
+      }
+
+      if (spec.type === AlgorithmType.ASTAR) {
         const t0 = Date.now()
         res = new AStarPathfinder().findPath(map, this.startPos, this.endPos, opts)
         elapsedMs = Date.now() - t0
-      } else if (algo === AlgorithmType.DIJKSTRA) {
+      } else if (spec.type === AlgorithmType.DIJKSTRA) {
         const t0 = Date.now()
         res = new DijkstraPathfinder().findPath(map, this.startPos, this.endPos, opts)
         elapsedMs = Date.now() - t0
-      } else if (algo === AlgorithmType.BFS) {
+      } else if (spec.type === AlgorithmType.BFS) {
         const t0 = Date.now()
         res = new BFSPathfinder().findPath(map, this.startPos, this.endPos, opts)
         elapsedMs = Date.now() - t0
-      } else if (algo === AlgorithmType.DFS) {
+      } else if (spec.type === AlgorithmType.DFS) {
         const t0 = Date.now()
         res = new DFSPathfinder().findPath(map, this.startPos, this.endPos, opts)
         elapsedMs = Date.now() - t0
-      } else if (algo === AlgorithmType.GREEDY_BFS) {
+      } else if (spec.type === AlgorithmType.GREEDY_BFS) {
         const t0 = Date.now()
         res = new GreedyBFSPathfinder().findPath(map, this.startPos, this.endPos, opts)
         elapsedMs = Date.now() - t0
-      } else if (algo === AlgorithmType.IDA_STAR) {
+      } else if (spec.type === AlgorithmType.IDA_STAR) {
         const t0 = Date.now()
         res = new IDAStarPathfinder().findPath(map, this.startPos, this.endPos, opts)
         elapsedMs = Date.now() - t0
       } else {
-        results.push(new AlgorithmCompareResult(algo, false, false, 0, 0, 0, 0, new Array<boolean>(n).fill(false), new Array<boolean>(n).fill(false)))
+        results.push(new AlgorithmCompareResult(spec.id, false, false, 0, 0, 0, 0, new Array<boolean>(n).fill(false), new Array<boolean>(n).fill(false)))
         continue
       }
 
@@ -330,15 +446,15 @@ export class NavixStore {
         }
       }
 
-      results.push(new AlgorithmCompareResult(algo, true, res.found, res.cost, res.explored.length, res.path.length, elapsedMs, exploredMask, pathMask))
+      results.push(new AlgorithmCompareResult(spec.id, true, res.found, res.cost, res.explored.length, res.path.length, elapsedMs, exploredMask, pathMask))
     }
 
     this.compareResults = results
     this.statusText = '对比完成'
   }
 
-  getCompareNodeType(algo: AlgorithmType, row: number, col: number, base: NodeType): NodeType {
-    const result = this.getCompareResult(algo)
+  getCompareNodeType(algoId: string, row: number, col: number, base: NodeType): NodeType {
+    const result = this.getCompareResult(algoId)
     if (!result) {
       return base
     }
@@ -598,7 +714,7 @@ export class NavixStore {
   clearVisualization(): void {
     this.pauseVisualizationPlayback()
     this.visualizationMode = VisualizationMode.NONE
-    this.visualizationAlgorithm = null
+    this.visualizationAlgorithmId = null
     this.searchSteps = []
     this.currentStep = 0
     this.visualizationClosedMask = []
@@ -610,18 +726,23 @@ export class NavixStore {
   }
 
   restartVisualization(): void {
-    if (this.visualizationMode === VisualizationMode.NONE || this.visualizationAlgorithm === null) {
+    if (this.visualizationMode === VisualizationMode.NONE || this.visualizationAlgorithmId === null) {
       return
     }
     const keepPlaying = this.visualizationPlaying
     this.pauseVisualizationPlayback()
-    this.startVisualization(this.visualizationMode, this.visualizationAlgorithm)
+    const spec = this.getAlgorithmSpecById(this.visualizationAlgorithmId)
+    if (!spec) {
+      this.clearVisualization()
+      return
+    }
+    this.startVisualization(this.visualizationMode, spec)
     if (keepPlaying) {
       this.startVisualizationPlayback()
     }
   }
 
-  startVisualization(mode: VisualizationMode, algo: AlgorithmType): void {
+  startVisualization(mode: VisualizationMode, spec: AlgorithmSpec): void {
     if (this.currentMapType !== MapType.GRID) {
       this.statusText = '当前仅支持栅格图可视化'
       return
@@ -630,38 +751,40 @@ export class NavixStore {
       this.statusText = '请先设置起点与终点'
       return
     }
-    if (!(algo === AlgorithmType.ASTAR
-      || algo === AlgorithmType.DIJKSTRA
-      || algo === AlgorithmType.BFS
-      || algo === AlgorithmType.DFS
-      || algo === AlgorithmType.GREEDY_BFS
-      || algo === AlgorithmType.IDA_STAR)) {
+    if (!(spec.type === AlgorithmType.ASTAR
+      || spec.type === AlgorithmType.DIJKSTRA
+      || spec.type === AlgorithmType.BFS
+      || spec.type === AlgorithmType.DFS
+      || spec.type === AlgorithmType.GREEDY_BFS
+      || spec.type === AlgorithmType.IDA_STAR)) {
       this.statusText = '当前仅实现 A* / Dijkstra / BFS / DFS / 贪心BFS / IDA* 的可视化'
       return
     }
 
     const map = new GridMapFromMapData(this.mapData)
     const exploredIds: number[] = []
+    const heuristicType = spec.type === AlgorithmType.ASTAR && spec.heuristicType ? spec.heuristicType : this.params.heuristicType
+    const heuristicWeight = spec.type === AlgorithmType.IDA_STAR && spec.weight !== undefined ? spec.weight : this.params.heuristicWeight
     const opts: PathfindingOptions = {
       allowDiagonal: this.params.allowDiagonal,
-      heuristicType: this.params.heuristicType,
-      heuristicWeight: this.params.heuristicWeight,
+      heuristicType: heuristicType,
+      heuristicWeight: heuristicWeight,
       onStep: (currentId: number, _openIds: number[]) => {
         exploredIds.push(currentId)
       }
     }
 
     let res: PathfindingResult
-    if (algo === AlgorithmType.ASTAR) {
+    if (spec.type === AlgorithmType.ASTAR) {
       res = new AStarPathfinder().findPath(map, this.startPos, this.endPos, opts)
-    } else if (algo === AlgorithmType.DIJKSTRA) {
+    } else if (spec.type === AlgorithmType.DIJKSTRA) {
       res = new DijkstraPathfinder().findPath(map, this.startPos, this.endPos, opts)
-    } else if (algo === AlgorithmType.BFS) {
+    } else if (spec.type === AlgorithmType.BFS) {
       res = new BFSPathfinder().findPath(map, this.startPos, this.endPos, opts)
-    } else if (algo === AlgorithmType.DFS) {
+    } else if (spec.type === AlgorithmType.DFS) {
       res = new DFSPathfinder().findPath(map, this.startPos, this.endPos, opts)
     } else {
-      if (algo === AlgorithmType.GREEDY_BFS) {
+      if (spec.type === AlgorithmType.GREEDY_BFS) {
         res = new GreedyBFSPathfinder().findPath(map, this.startPos, this.endPos, opts)
       } else {
         res = new IDAStarPathfinder().findPath(map, this.startPos, this.endPos, opts)
@@ -684,7 +807,7 @@ export class NavixStore {
     }
 
     this.visualizationMode = mode
-    this.visualizationAlgorithm = algo
+    this.visualizationAlgorithmId = spec.id
     this.visualizationExploredIds = exploredIds
     this.visualizationPathIds = pathIds
     this.visualizationFound = res.found

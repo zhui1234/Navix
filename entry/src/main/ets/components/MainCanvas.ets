@@ -1,5 +1,5 @@
 import { NavixStore, navixStore } from '../store/NavixStore'
-import { NodeType, ToolType, MapType, AlgorithmType, VisualizationMode } from '../models/MapTypes'
+import { NodeType, ToolType, MapType, AlgorithmSpec, VisualizationMode } from '../models/MapTypes'
 
 const MINIMAP_SIZE: number = 120
 const MINIMAP_CELLS: number = 40
@@ -26,7 +26,7 @@ const MINIMAP_INDICES: number[] = createIndices(MINIMAP_CELLS)
 @ComponentV2
 export struct MainCanvas {
   @Local store: NavixStore = navixStore
-  @Param algorithm: AlgorithmType | null = null
+  @Param algorithm: string | null = null
   private horizontalScroller: Scroller = new Scroller()
   private verticalScroller: Scroller = new Scroller()
   @Local private painting: boolean = false
@@ -74,13 +74,13 @@ export struct MainCanvas {
     const id = row * this.store.mapData.cols + col
     const colors: string[] = []
     for (let i = 0; i < this.store.selectedAlgorithms.length; i++) {
-      const algo = this.store.selectedAlgorithms[i]
-      const result = this.store.getCompareResult(algo)
+      const spec = this.store.selectedAlgorithms[i]
+      const result = this.store.getCompareResult(spec.id)
       if (!result) {
         continue
       }
       if (id >= 0 && id < result.pathMask.length && result.pathMask[id]) {
-        colors.push(this.store.getAlgorithmPathColor(algo))
+        colors.push(this.store.getAlgorithmPathColor(spec))
       }
     }
     return colors
@@ -207,16 +207,13 @@ export struct MainCanvas {
     return '未实现'
   }
 
-  getLegendPathText(algo: AlgorithmType): string {
+  getLegendPathText(algo: AlgorithmSpec): string {
     if (!this.store.startPos || !this.store.endPos) {
       return '-'
     }
-    const result = this.store.getCompareResult(algo)
+    const result = this.store.getCompareResult(algo.id)
     if (!result) {
-      if (algo === AlgorithmType.ASTAR || algo === AlgorithmType.DIJKSTRA) {
-        return '-'
-      }
-      return '未实现'
+      return '-'
     }
     if (!result.implemented) {
       return '未实现'
@@ -227,22 +224,22 @@ export struct MainCanvas {
     return `${result.pathLength}`
   }
 
-  getLegendExploredText(algo: AlgorithmType): string {
+  getLegendExploredText(algo: AlgorithmSpec): string {
     if (!this.store.startPos || !this.store.endPos) {
       return '-'
     }
-    const result = this.store.getCompareResult(algo)
+    const result = this.store.getCompareResult(algo.id)
     if (!result || !result.implemented) {
       return '-'
     }
     return `${result.exploredCount}`
   }
 
-  getLegendTimeText(algo: AlgorithmType): string {
+  getLegendTimeText(algo: AlgorithmSpec): string {
     if (!this.store.startPos || !this.store.endPos) {
       return '-'
     }
-    const result = this.store.getCompareResult(algo)
+    const result = this.store.getCompareResult(algo.id)
     if (!result || !result.implemented) {
       return '-'
     }
@@ -296,7 +293,7 @@ export struct MainCanvas {
         Divider()
           .color(this.store.getColor('navix_border_color'))
 
-        ForEach(this.store.selectedAlgorithms, (algo: AlgorithmType) => {
+        ForEach(this.store.selectedAlgorithms, (algo: AlgorithmSpec) => {
           Column({ space: 6 }) {
             Row({ space: 8 }) {
               Row({ space: 6 }) {
@@ -306,7 +303,7 @@ export struct MainCanvas {
                   .borderRadius(2)
                   .backgroundColor(this.store.getAlgorithmPathColor(algo))
 
-                Text(this.store.getAlgorithmName(algo))
+                Text(this.store.getAlgorithmLabel(algo))
                   .fontSize(11)
                   .fontColor(this.store.getColor('navix_text_primary'))
               }
@@ -336,7 +333,7 @@ export struct MainCanvas {
               .color(this.store.getColor('navix_border_color'))
           }
           .width('100%')
-        }, (algo: AlgorithmType) => `${algo}`)
+        }, (algo: AlgorithmSpec) => `${algo.id}`)
       }
       .alignItems(HorizontalAlign.Start)
       .width(260)

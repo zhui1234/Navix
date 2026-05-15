@@ -66,6 +66,15 @@ export enum VisualizationMode {
   OPEN_CLOSED = 2
 }
 
+export type HeuristicType = 'manhattan' | 'euclidean' | 'chebyshev' | 'octile'
+
+export interface AlgorithmSpec {
+  id: string
+  type: AlgorithmType
+  heuristicType?: HeuristicType
+  weight?: number
+}
+
 export interface NavixParams {
   gridRows: number
   gridCols: number
@@ -74,7 +83,7 @@ export interface NavixParams {
   gridLineColor: string
   showGridLines: boolean
   theme: 'light' | 'dark'
-  heuristicType: 'manhattan' | 'euclidean' | 'chebyshev' | 'octile'
+  heuristicType: HeuristicType
   allowDiagonal: boolean
   heuristicWeight: number
   animationSpeed: number

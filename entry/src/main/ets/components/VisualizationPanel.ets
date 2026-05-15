@@ -1,5 +1,5 @@
 import { NavixStore, navixStore } from '../store/NavixStore'
-import { RightPanelState, AlgorithmType, VisualizationMode } from '../models/MapTypes'
+import { RightPanelState, AlgorithmSpec, VisualizationMode } from '../models/MapTypes'
 
 @ComponentV2
 export struct VisualizationPanel {
@@ -7,12 +7,12 @@ export struct VisualizationPanel {
   @Local showTimeline: boolean = true
   @Local hoveredTimeline: boolean = false
 
-  isSelected(mode: VisualizationMode, algo: AlgorithmType): boolean {
-    return this.store.visualizationMode === mode && this.store.visualizationAlgorithm === algo
+  isSelected(mode: VisualizationMode, algo: AlgorithmSpec): boolean {
+    return this.store.visualizationMode === mode && this.store.visualizationAlgorithmId === algo.id
   }
 
   @Builder
-  AlgoOption(mode: VisualizationMode, algo: AlgorithmType) {
+  AlgoOption(mode: VisualizationMode, algo: AlgorithmSpec) {
     Row({ space: 8 }) {
       Column()
         .width(10)
@@ -20,7 +20,7 @@ export struct VisualizationPanel {
         .borderRadius(2)
         .backgroundColor(this.store.getAlgorithmPathColor(algo))
 
-      Text(this.store.getAlgorithmName(algo))
+      Text(this.store.getAlgorithmLabel(algo))
         .fontSize(12)
         .fontColor(this.store.getColor('navix_text_primary'))
 
@@ -101,9 +101,9 @@ export struct VisualizationPanel {
                 .fontColor(this.store.getColor('navix_text_secondary'))
                 .padding({ left: 6, right: 6, bottom: 4 })
 
-              ForEach(this.store.selectedAlgorithms, (algo: AlgorithmType) => {
+              ForEach(this.store.selectedAlgorithms, (algo: AlgorithmSpec) => {
                 this.AlgoOption(VisualizationMode.TIMELINE, algo)
-              }, (algo: AlgorithmType) => `${algo}`)
+              }, (algo: AlgorithmSpec) => `${algo.id}`)
             }
 
             Blank()
