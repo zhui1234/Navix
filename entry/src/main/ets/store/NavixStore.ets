@@ -6,6 +6,7 @@ import {
   RightPanelState,
   ToolType,
   AlgorithmType,
+  MapType,
   NavixParams,
   HeatmapConfig
 } from '../models/MapTypes'
@@ -14,11 +15,14 @@ import {
 export class NavixStore {
   @Trace currentTool: ToolType | null = null
   @Trace currentAlgorithm: AlgorithmType | null = null
+  @Trace currentMapType: MapType = MapType.GRID
 
   @Trace leftPanelState: LeftPanelState = LeftPanelState.COLLAPSED
   @Trace rightPanelState: RightPanelState = RightPanelState.COLLAPSED
 
   @Trace mapData: MapData = this.createEmptyMap(20, 20)
+  @Trace mapVersion: number = 0
+  @Trace canvasZoomPercent: number = 100
   @Trace theme: 'light' | 'dark' = 'light'
   @Trace params: NavixParams = {
     gridRows: 20,
@@ -77,6 +81,15 @@ export class NavixStore {
     }
   }
 
+  setCanvasZoomPercent(percent: number): void {
+    const safePercent = percent < 10 ? 10 : (percent > 300 ? 300 : percent)
+    this.canvasZoomPercent = safePercent
+  }
+
+  setMapType(mapType: MapType): void {
+    this.currentMapType = mapType
+  }
+
   toggleLeftPanel(panelId: LeftPanelState) {
     if (this.leftPanelState === panelId) {
       this.leftPanelState = LeftPanelState.COLLAPSED
@@ -94,26 +107,32 @@ export class NavixStore {
   }
 
   updateParams(partial: Partial<NavixParams>): void {
-    if (partial.gridRows !== undefined) this.params.gridRows = partial.gridRows
-    if (partial.gridCols !== undefined) this.params.gridCols = partial.gridCols
-    if (partial.cellSize !== undefined) this.params.cellSize = partial.cellSize
-    if (partial.backgroundColor !== undefined) this.params.backgroundColor = partial.backgroundColor
-    if (partial.gridLineColor !== undefined) this.params.gridLineColor = partial.gridLineColor
-    if (partial.showGridLines !== undefined) this.params.showGridLines = partial.showGridLines
-    if (partial.theme !== undefined) this.params.theme = partial.theme
-    if (partial.heuristicType !== undefined) this.params.heuristicType = partial.heuristicType
-    if (partial.allowDiagonal !== undefined) this.params.allowDiagonal = partial.allowDiagonal
-    if (partial.heuristicWeight !== undefined) this.params.heuristicWeight = partial.heuristicWeight
-    if (partial.animationSpeed !== undefined) this.params.animationSpeed = partial.animationSpeed
+    const prev = this.params
+    this.params = {
+      gridRows: partial.gridRows !== undefined ? partial.gridRows : prev.gridRows,
+      gridCols: partial.gridCols !== undefined ? partial.gridCols : prev.gridCols,
+      cellSize: partial.cellSize !== undefined ? partial.cellSize : prev.cellSize,
+      backgroundColor: partial.backgroundColor !== undefined ? partial.backgroundColor : prev.backgroundColor,
+      gridLineColor: partial.gridLineColor !== undefined ? partial.gridLineColor : prev.gridLineColor,
+      showGridLines: partial.showGridLines !== undefined ? partial.showGridLines : prev.showGridLines,
+      theme: partial.theme !== undefined ? partial.theme : prev.theme,
+      heuristicType: partial.heuristicType !== undefined ? partial.heuristicType : prev.heuristicType,
+      allowDiagonal: partial.allowDiagonal !== undefined ? partial.allowDiagonal : prev.allowDiagonal,
+      heuristicWeight: partial.heuristicWeight !== undefined ? partial.heuristicWeight : prev.heuristicWeight,
+      animationSpeed: partial.animationSpeed !== undefined ? partial.animationSpeed : prev.animationSpeed
+    }
   }
 
   updateHeatmapConfig(partial: Partial<HeatmapConfig>): void {
-    if (partial.type !== undefined) this.heatmapConfig.type = partial.type
-    if (partial.gradient !== undefined) this.heatmapConfig.gradient = partial.gradient
-    if (partial.opacity !== undefined) this.heatmapConfig.opacity = partial.opacity
-    if (partial.blendMode !== undefined) this.heatmapConfig.blendMode = partial.blendMode
-    if (partial.realtimeUpdate !== undefined) this.heatmapConfig.realtimeUpdate = partial.realtimeUpdate
-    if (partial.showLegend !== undefined) this.heatmapConfig.showLegend = partial.showLegend
+    const prev = this.heatmapConfig
+    this.heatmapConfig = {
+      type: partial.type !== undefined ? partial.type : prev.type,
+      gradient: partial.gradient !== undefined ? partial.gradient : prev.gradient,
+      opacity: partial.opacity !== undefined ? partial.opacity : prev.opacity,
+      blendMode: partial.blendMode !== undefined ? partial.blendMode : prev.blendMode,
+      realtimeUpdate: partial.realtimeUpdate !== undefined ? partial.realtimeUpdate : prev.realtimeUpdate,
+      showLegend: partial.showLegend !== undefined ? partial.showLegend : prev.showLegend
+    }
   }
 
   setStartPos(pos: GridPos): void {
@@ -132,6 +151,7 @@ export class NavixStore {
 
   updateMapData(data: MapData): void {
     this.mapData = data
+    this.mapVersion++
   }
 
   resetSearchState(): void {
@@ -181,13 +201,16 @@ export class NavixStore {
     const safeRows = rows > 0 ? rows : 20
     const safeCols = cols > 0 ? cols : 20
     this.mapData = this.createEmptyMap(safeRows, safeCols)
+    this.mapVersion++
     this.updateParams({ gridRows: safeRows, gridCols: safeCols })
+    this.statusText = `地图大小: ${safeCols}×${safeRows}`
   }
 
   generateEmptyMap(rows: number = this.mapData.rows, cols: number = this.mapData.cols): void {
     const safeRows = rows > 0 ? rows : 20
     const safeCols = cols > 0 ? cols : 20
     this.mapData = this.createEmptyMap(safeRows, safeCols)
+    this.mapVersion++
     this.updateParams({ gridRows: safeRows, gridCols: safeCols })
   }
 
@@ -224,6 +247,7 @@ export class NavixStore {
     const startY = 1
     carve(startX, startY)
     this.mapData = { grid, rows: safeRows, cols: safeCols }
+    this.mapVersion++
     this.updateParams({ gridRows: safeRows, gridCols: safeCols })
   }
 
@@ -271,6 +295,7 @@ export class NavixStore {
     }
 
     this.mapData = { grid, rows: safeRows, cols: safeCols }
+    this.mapVersion++
     this.updateParams({ gridRows: safeRows, gridCols: safeCols })
   }
 
@@ -301,6 +326,7 @@ export class NavixStore {
     }
 
     this.mapData = { grid, rows: safeRows, cols: safeCols }
+    this.mapVersion++
     this.updateParams({ gridRows: safeRows, gridCols: safeCols })
   }
 
@@ -308,6 +334,7 @@ export class NavixStore {
     const safeRows = rows > 0 ? rows : 20
     const safeCols = cols > 0 ? cols : 20
     this.mapData = this.createEmptyMap(safeRows, safeCols)
+    this.mapVersion++
     this.updateParams({ gridRows: safeRows, gridCols: safeCols })
     this.generateRandomObstacles()
   }
@@ -316,6 +343,7 @@ export class NavixStore {
     const safeRows = rows > 0 ? rows : 20
     const safeCols = cols > 0 ? cols : 20
     this.mapData = this.createEmptyMap(safeRows, safeCols)
+    this.mapVersion++
     this.updateParams({ gridRows: safeRows, gridCols: safeCols })
     
     for (let i = 0; i < safeRows; i++) {
@@ -331,6 +359,7 @@ export class NavixStore {
     const safeRows = rows > 0 ? rows : 20
     const safeCols = cols > 0 ? cols : 20
     this.mapData = this.createEmptyMap(safeRows, safeCols)
+    this.mapVersion++
     this.updateParams({ gridRows: safeRows, gridCols: safeCols })
     
     for (let i = 0; i < safeRows; i++) {
@@ -347,6 +376,7 @@ export class NavixStore {
     const safeRows = rows > 0 ? rows : 20
     const safeCols = cols > 0 ? cols : 20
     this.mapData = this.createEmptyMap(safeRows, safeCols)
+    this.mapVersion++
     this.updateParams({ gridRows: safeRows, gridCols: safeCols })
     
     for (let i = 0; i < safeRows; i++) {

@@ -53,6 +53,13 @@ export enum AlgorithmType {
   PRM = 9
 }
 
+export enum MapType {
+  GRID = 0,
+  GRAPH = 1,
+  MAP_2D5 = 2,
+  MAP_3D = 3
+}
+
 export interface NavixParams {
   gridRows: number
   gridCols: number

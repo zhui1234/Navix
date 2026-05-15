@@ -20,37 +20,33 @@ struct Index {
 
   @Computed
   get rightPanelWidth(): number {
-    return this.store.rightPanelState === RightPanelState.COLLAPSED ? 0 : 180
+    return this.store.rightPanelState === RightPanelState.COLLAPSED ? 0 : 200
   }
   build() {
     Column() {
       TitleBar()
 
-      Column() {
-        Row() {
-          LeftTriggerBar()
+      Row() {
+        LeftTriggerBar()
 
-          Column() {
-            LeftPanel()
-          }
-          .width(this.leftPanelWidth)
-          .height('100%')
-
-          MainCanvas()
-
-          Column() {
-            RightPanel()
-          }
-          .width(this.rightPanelWidth)
-          .height('100%')
-
-          RightTriggerBar()
+        Column() {
+          LeftPanel()
         }
-        .width('100%')
+        .width(this.leftPanelWidth)
         .height('100%')
+
+        MainCanvas()
+
+        Column() {
+          RightPanel()
+        }
+        .width(this.rightPanelWidth)
+        .height('100%')
+
+        RightTriggerBar()
       }
       .width('100%')
-      .height(0)
+      .height('100%')
       .layoutWeight(1)
 
       StatusBar()
