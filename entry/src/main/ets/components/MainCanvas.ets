@@ -1,5 +1,5 @@
 import { NavixStore, navixStore } from '../store/NavixStore'
-import { NodeType, ToolType, MapType, AlgorithmType } from '../models/MapTypes'
+import { NodeType, ToolType, MapType, AlgorithmType, VisualizationMode } from '../models/MapTypes'
 
 const MINIMAP_SIZE: number = 120
 const MINIMAP_CELLS: number = 40
@@ -88,24 +88,98 @@ export struct MainCanvas {
 
   @Builder
   ComparePathOverlay(row: number, col: number, base: NodeType) {
-    if (this.getComparePathColors(row, col, base).length > 0) {
-      Row({ space: 0 }) {
-        ForEach(this.getComparePathColors(row, col, base), (color: string, _idx: number) => {
-          Column()
-            .layoutWeight(1)
-            .height('100%')
-            .backgroundColor(color)
-            .opacity(0.55)
-        }, (_color: string, idx: number) => `${this.store.mapVersion}-${row}-${col}-${idx}`)
+    if (this.store.visualizationMode === VisualizationMode.NONE) {
+      if (this.getComparePathColors(row, col, base).length > 0) {
+        Row({ space: 0 }) {
+          ForEach(this.getComparePathColors(row, col, base), (color: string, _idx: number) => {
+            Column()
+              .layoutWeight(1)
+              .height('100%')
+              .backgroundColor(color)
+              .opacity(0.55)
+          }, (_color: string, idx: number) => `${this.store.mapVersion}-${row}-${col}-${idx}`)
+        }
+        .width('100%')
+        .height('100%')
       }
-      .width('100%')
-      .height('100%')
+    }
+  }
+
+  shouldShowVisualization(): boolean {
+    return this.algorithm === null && this.store.visualizationMode !== VisualizationMode.NONE
+  }
+
+  shouldShowVisualizationPath(): boolean {
+    if (!this.shouldShowVisualization()) {
+      return false
+    }
+    if (!this.store.visualizationFound) {
+      return false
+    }
+    if (this.store.visualizationMode !== VisualizationMode.TIMELINE) {
+      return false
+    }
+    if (this.store.searchSteps.length === 0) {
+      return false
+    }
+    return this.store.currentStep >= this.store.searchSteps.length - 1
+  }
+
+  getVisualizationOverlayColor(row: number, col: number, base: NodeType): ResourceColor | null {
+    if (!this.shouldShowVisualization()) {
+      return null
+    }
+    if (base === NodeType.START || base === NodeType.END || base === NodeType.OBSTACLE) {
+      return null
+    }
+    const id = row * this.store.mapData.cols + col
+    if (id < 0 || id >= this.store.mapData.rows * this.store.mapData.cols) {
+      return null
+    }
+    if (this.shouldShowVisualizationPath() && id < this.store.visualizationPathMask.length && this.store.visualizationPathMask[id]) {
+      return this.store.getColor('navix_node_path')
+    }
+    if (id === this.store.visualizationCurrentId) {
+      return this.store.getColor('navix_accent_highlight')
+    }
+    if (id < this.store.visualizationClosedMask.length && this.store.visualizationClosedMask[id]) {
+      return this.store.getColor('navix_node_explored')
+    }
+    return null
+  }
+
+  getVisualizationOverlayOpacity(row: number, col: number, base: NodeType): number {
+    const color = this.getVisualizationOverlayColor(row, col, base)
+    if (color === null) {
+      return 0
+    }
+    const id = row * this.store.mapData.cols + col
+    if (this.shouldShowVisualizationPath() && id < this.store.visualizationPathMask.length && this.store.visualizationPathMask[id]) {
+      return 0.6
+    }
+    if (id === this.store.visualizationCurrentId) {
+      return 0.55
+    }
+    return 0.35
+  }
+
+  @Builder
+  VisualizationOverlay(row: number, col: number, base: NodeType) {
+    if (this.shouldShowVisualization()) {
+      if (this.getVisualizationOverlayColor(row, col, base) !== null) {
+        Column()
+          .width('100%')
+          .height('100%')
+          .backgroundColor(this.getVisualizationOverlayColor(row, col, base)!)
+          .opacity(this.getVisualizationOverlayOpacity(row, col, base))
+      }
     }
   }
 
   shouldShowLegend(): boolean {
     return this.algorithm === null
       && this.store.selectedAlgorithms.length > 0
+      && this.store.visualizationMode === VisualizationMode.NONE
   }
 
   formatElapsed(ms: number): string {
@@ -444,6 +518,7 @@ export struct MainCanvas {
                         .height('100%')
                         .backgroundColor(this.getCellColor(this.getDisplayNodeType(rowIndex, colIndex, cell)))
                       this.ComparePathOverlay(rowIndex, colIndex, cell)
+                      this.VisualizationOverlay(rowIndex, colIndex, cell)
                     }
                       .width(this.getScaledCellSize())
                       .height(this.getScaledCellSize())

@@ -10,6 +10,7 @@ export interface PathfindingOptions {
   allowDiagonal: boolean
   heuristicType: 'manhattan' | 'euclidean' | 'chebyshev' | 'octile'
   heuristicWeight: number
+  onStep?: (currentId: number, openIds: number[]) => void
 }
 
 export interface PathfindingResult {

@@ -15,6 +15,14 @@ export class MinHeap {
     return this.data.length
   }
 
+  ids(): number[] {
+    const res: number[] = []
+    for (let i = 0; i < this.data.length; i++) {
+      res.push(this.data[i].id)
+    }
+    return res
+  }
+
   push(node: HeapNode): void {
     this.data.push(node)
     this.bubbleUp(this.data.length - 1)
@@ -70,4 +78,3 @@ export class MinHeap {
     }
   }
 }
-

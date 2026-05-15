@@ -8,11 +8,16 @@ import {
   AlgorithmType,
   MapType,
   NavixParams,
-  HeatmapConfig
+  HeatmapConfig,
+  VisualizationMode
 } from '../models/MapTypes'
 import { GridMapFromMapData, PathfindingOptions, PathfindingResult } from '../algorithms/PathfindingTypes'
 import { AStarPathfinder } from '../algorithms/AStar'
 import { DijkstraPathfinder } from '../algorithms/Dijkstra'
+import { BFSPathfinder } from '../algorithms/BFS'
+import { DFSPathfinder } from '../algorithms/DFS'
+import { GreedyBFSPathfinder } from '../algorithms/GreedyBFS'
+import { JPSPathfinder } from '../algorithms/JPS'
 
 export class AlgorithmCompareResult {
   algo: AlgorithmType
@@ -82,6 +87,17 @@ export class NavixStore {
   @Trace statusText: string = '就绪'
   @Trace searchSteps: GridPos[][] = []
   @Trace currentStep: number = 0
+  @Trace visualizationMode: VisualizationMode = VisualizationMode.NONE
+  @Trace visualizationAlgorithm: AlgorithmType | null = null
+  @Trace visualizationClosedMask: boolean[] = []
+  @Trace visualizationPathMask: boolean[] = []
+  @Trace visualizationCurrentId: number = -1
+  @Trace visualizationFound: boolean = false
+  @Trace visualizationPlaying: boolean = false
+
+  private visualizationExploredIds: number[] = []
+  private visualizationPathIds: number[] = []
+  private visualizationTimerId: number = -1
 
   private createEmptyMap(rows: number, cols: number): MapData {
     const grid: NodeType[][] = []
@@ -92,6 +108,21 @@ export class NavixStore {
       }
     }
     return { grid, rows, cols }
+  }
+
+  getObstacleCount(): number {
+    if (this.currentMapType !== MapType.GRID) {
+      return 0
+    }
+    let count = 0
+    for (let i = 0; i < this.mapData.rows; i++) {
+      for (let j = 0; j < this.mapData.cols; j++) {
+        if (this.mapData.grid[i][j] === NodeType.OBSTACLE) {
+          count++
+        }
+      }
+    }
+    return count
   }
 
   setTool(tool: ToolType): void {
@@ -194,6 +225,12 @@ export class NavixStore {
     if (algo === AlgorithmType.DFS) {
       return '#A855F7'
     }
+    if (algo === AlgorithmType.GREEDY_BFS) {
+      return '#14B8A6'
+    }
+    if (algo === AlgorithmType.JPS) {
+      return '#EF4444'
+    }
     return '#64748B'
   }
 
@@ -232,6 +269,22 @@ export class NavixStore {
       } else if (algo === AlgorithmType.DIJKSTRA) {
         const t0 = Date.now()
         res = new DijkstraPathfinder().findPath(map, this.startPos, this.endPos, opts)
+        elapsedMs = Date.now() - t0
+      } else if (algo === AlgorithmType.BFS) {
+        const t0 = Date.now()
+        res = new BFSPathfinder().findPath(map, this.startPos, this.endPos, opts)
+        elapsedMs = Date.now() - t0
+      } else if (algo === AlgorithmType.DFS) {
+        const t0 = Date.now()
+        res = new DFSPathfinder().findPath(map, this.startPos, this.endPos, opts)
+        elapsedMs = Date.now() - t0
+      } else if (algo === AlgorithmType.GREEDY_BFS) {
+        const t0 = Date.now()
+        res = new GreedyBFSPathfinder().findPath(map, this.startPos, this.endPos, opts)
+        elapsedMs = Date.now() - t0
+      } else if (algo === AlgorithmType.JPS) {
+        const t0 = Date.now()
+        res = new JPSPathfinder().findPath(map, this.startPos, this.endPos, opts)
         elapsedMs = Date.now() - t0
       } else {
         results.push(new AlgorithmCompareResult(algo, false, false, 0, 0, 0, 0, new Array<boolean>(n).fill(false), new Array<boolean>(n).fill(false)))
@@ -302,10 +355,14 @@ export class NavixStore {
   }
 
   toggleRightPanel(state: RightPanelState): void {
+    const prev = this.rightPanelState
     if (this.rightPanelState === state) {
       this.rightPanelState = RightPanelState.COLLAPSED
     } else {
       this.rightPanelState = state
+    }
+    if (prev === RightPanelState.VISUALIZATION && this.rightPanelState !== RightPanelState.VISUALIZATION) {
+      this.clearVisualization()
     }
   }
 
@@ -350,6 +407,9 @@ export class NavixStore {
     this.mapVersion++
     if (this.compareResults.length > 0) {
       this.compareResults = []
+    }
+    if (this.visualizationMode !== VisualizationMode.NONE) {
+      this.clearVisualization()
     }
   }
 
@@ -452,15 +512,231 @@ export class NavixStore {
   }
 
   nextStep(): void {
-    if (this.currentStep < this.searchSteps.length - 1) {
-      this.currentStep++
-    }
+    this.pauseVisualizationPlayback()
+    this.setVisualizationStep(this.currentStep + 1)
   }
 
   prevStep(): void {
-    if (this.currentStep > 0) {
-      this.currentStep--
+    this.pauseVisualizationPlayback()
+    this.setVisualizationStep(this.currentStep - 1)
+  }
+
+  toggleVisualizationPlayback(): void {
+    if (this.visualizationMode === VisualizationMode.NONE) {
+      return
     }
+    if (this.visualizationPlaying) {
+      this.pauseVisualizationPlayback()
+      return
+    }
+    this.startVisualizationPlayback()
+  }
+
+  startVisualizationPlayback(): void {
+    if (this.visualizationMode === VisualizationMode.NONE) {
+      return
+    }
+    if (this.searchSteps.length <= 1) {
+      return
+    }
+    if (this.currentStep >= this.searchSteps.length - 1) {
+      this.setVisualizationStep(0)
+    }
+    this.visualizationPlaying = true
+    if (this.visualizationTimerId >= 0) {
+      clearInterval(this.visualizationTimerId)
+      this.visualizationTimerId = -1
+    }
+    const interval = this.params.animationSpeed > 10 ? this.params.animationSpeed : 10
+    this.visualizationTimerId = setInterval(() => {
+      if (!this.visualizationPlaying) {
+        return
+      }
+      if (this.searchSteps.length === 0) {
+        this.pauseVisualizationPlayback()
+        return
+      }
+      if (this.currentStep >= this.searchSteps.length - 1) {
+        this.pauseVisualizationPlayback()
+        return
+      }
+      this.setVisualizationStep(this.currentStep + 1)
+    }, interval)
+  }
+
+  pauseVisualizationPlayback(): void {
+    if (this.visualizationTimerId >= 0) {
+      clearInterval(this.visualizationTimerId)
+      this.visualizationTimerId = -1
+    }
+    this.visualizationPlaying = false
+  }
+
+  clearVisualization(): void {
+    this.pauseVisualizationPlayback()
+    this.visualizationMode = VisualizationMode.NONE
+    this.visualizationAlgorithm = null
+    this.searchSteps = []
+    this.currentStep = 0
+    this.visualizationClosedMask = []
+    this.visualizationPathMask = []
+    this.visualizationCurrentId = -1
+    this.visualizationFound = false
+    this.visualizationExploredIds = []
+    this.visualizationPathIds = []
+  }
+
+  restartVisualization(): void {
+    if (this.visualizationMode === VisualizationMode.NONE || this.visualizationAlgorithm === null) {
+      return
+    }
+    const keepPlaying = this.visualizationPlaying
+    this.pauseVisualizationPlayback()
+    this.startVisualization(this.visualizationMode, this.visualizationAlgorithm)
+    if (keepPlaying) {
+      this.startVisualizationPlayback()
+    }
+  }
+
+  startVisualization(mode: VisualizationMode, algo: AlgorithmType): void {
+    if (this.currentMapType !== MapType.GRID) {
+      this.statusText = '当前仅支持栅格图可视化'
+      return
+    }
+    if (!this.startPos || !this.endPos) {
+      this.statusText = '请先设置起点与终点'
+      return
+    }
+    if (!(algo === AlgorithmType.ASTAR
+      || algo === AlgorithmType.DIJKSTRA
+      || algo === AlgorithmType.BFS
+      || algo === AlgorithmType.DFS
+      || algo === AlgorithmType.GREEDY_BFS
+      || algo === AlgorithmType.JPS)) {
+      this.statusText = '当前仅实现 A* / Dijkstra / BFS / DFS / 贪心BFS / JPS 的可视化'
+      return
+    }
+
+    const map = new GridMapFromMapData(this.mapData)
+    const exploredIds: number[] = []
+    const opts: PathfindingOptions = {
+      allowDiagonal: this.params.allowDiagonal,
+      heuristicType: this.params.heuristicType,
+      heuristicWeight: this.params.heuristicWeight,
+      onStep: (currentId: number, _openIds: number[]) => {
+        exploredIds.push(currentId)
+      }
+    }
+
+    let res: PathfindingResult
+    if (algo === AlgorithmType.ASTAR) {
+      res = new AStarPathfinder().findPath(map, this.startPos, this.endPos, opts)
+    } else if (algo === AlgorithmType.DIJKSTRA) {
+      res = new DijkstraPathfinder().findPath(map, this.startPos, this.endPos, opts)
+    } else if (algo === AlgorithmType.BFS) {
+      res = new BFSPathfinder().findPath(map, this.startPos, this.endPos, opts)
+    } else if (algo === AlgorithmType.DFS) {
+      res = new DFSPathfinder().findPath(map, this.startPos, this.endPos, opts)
+    } else {
+      if (algo === AlgorithmType.GREEDY_BFS) {
+        res = new GreedyBFSPathfinder().findPath(map, this.startPos, this.endPos, opts)
+      } else {
+        res = new JPSPathfinder().findPath(map, this.startPos, this.endPos, opts)
+      }
+    }
+
+    const steps: GridPos[][] = []
+    for (let i = 0; i < res.explored.length; i++) {
+      steps.push([res.explored[i]])
+    }
+    if (exploredIds.length === 0) {
+      for (let i = 0; i < res.explored.length; i++) {
+        exploredIds.push(res.explored[i].row * this.mapData.cols + res.explored[i].col)
+      }
+    }
+
+    const pathIds: number[] = []
+    for (let i = 0; i < res.path.length; i++) {
+      pathIds.push(res.path[i].row * this.mapData.cols + res.path[i].col)
+    }
+
+    this.visualizationMode = mode
+    this.visualizationAlgorithm = algo
+    this.visualizationExploredIds = exploredIds
+    this.visualizationPathIds = pathIds
+    this.visualizationFound = res.found
+    this.searchSteps = steps
+    this.currentStep = 0
+
+    this.ensureVisualizationMasks()
+    this.setVisualizationStep(0)
+    this.statusText = '可视化已生成'
+  }
+
+  ensureVisualizationMasks(): void {
+    const n = this.mapData.rows * this.mapData.cols
+    if (this.visualizationClosedMask.length !== n) {
+      this.visualizationClosedMask = new Array<boolean>(n).fill(false)
+    }
+    if (this.visualizationPathMask.length !== n) {
+      this.visualizationPathMask = new Array<boolean>(n).fill(false)
+    }
+    for (let i = 0; i < n; i++) {
+      this.visualizationClosedMask[i] = false
+      this.visualizationPathMask[i] = false
+    }
+    for (let i = 0; i < this.visualizationPathIds.length; i++) {
+      const id = this.visualizationPathIds[i]
+      if (id >= 0 && id < n) {
+        this.visualizationPathMask[id] = true
+      }
+    }
+  }
+
+  setVisualizationStep(step: number): void {
+    if (this.visualizationMode === VisualizationMode.NONE) {
+      if (step < 0) {
+        this.currentStep = 0
+      } else {
+        this.currentStep = step
+      }
+      return
+    }
+    const max = this.searchSteps.length > 0 ? this.searchSteps.length - 1 : 0
+    const safe = step < 0 ? 0 : (step > max ? max : step)
+    if (this.searchSteps.length === 0) {
+      this.currentStep = 0
+      return
+    }
+
+    const prev = this.currentStep
+    this.currentStep = safe
+
+    const n = this.mapData.rows * this.mapData.cols
+    if (this.visualizationClosedMask.length !== n) {
+      this.ensureVisualizationMasks()
+    }
+
+    if (safe < prev) {
+      for (let i = 0; i < n; i++) {
+        this.visualizationClosedMask[i] = false
+      }
+      for (let i = 0; i <= safe && i < this.visualizationExploredIds.length; i++) {
+        const id = this.visualizationExploredIds[i]
+        if (id >= 0 && id < n) {
+          this.visualizationClosedMask[id] = true
+        }
+      }
+    } else {
+      for (let i = prev + 1; i <= safe && i < this.visualizationExploredIds.length; i++) {
+        const id = this.visualizationExploredIds[i]
+        if (id >= 0 && id < n) {
+          this.visualizationClosedMask[id] = true
+        }
+      }
+    }
+
+    this.visualizationCurrentId = safe < this.visualizationExploredIds.length ? this.visualizationExploredIds[safe] : -1
   }
 
   generateRandomObstacles(): void {

@@ -14,6 +14,14 @@ function posFromIndex(index: number, cols: number): GridPos {
   return { row: row, col: col }
 }
 
+function stepCost(fromId: number, toId: number, cols: number): number {
+  const fr = Math.floor(fromId / cols)
+  const fc = fromId - fr * cols
+  const tr = Math.floor(toId / cols)
+  const tc = toId - tr * cols
+  return (fr !== tr && fc !== tc) ? Math.SQRT2 : 1
+}
+
 function heuristic(aRow: number, aCol: number, bRow: number, bCol: number, type: HeuristicType): number {
   const dx = Math.abs(aCol - bCol)
   const dy = Math.abs(aRow - bRow)
@@ -30,7 +38,7 @@ function heuristic(aRow: number, aCol: number, bRow: number, bCol: number, type:
   return dx < dy ? f * dx + dy : f * dy + dx
 }
 
-export class AStarPathfinder {
+export class GreedyBFSPathfinder {
   findPath(map: GridMap, start: GridPos, end: GridPos, options: PathfindingOptions): PathfindingResult {
     const rows = map.rows
     const cols = map.cols
@@ -38,20 +46,15 @@ export class AStarPathfinder {
     const startId = indexOfPos(start.row, start.col, cols)
     const endId = indexOfPos(end.row, end.col, cols)
 
-    const g: number[] = new Array<number>(n)
     const prev: number[] = new Array<number>(n)
     const closed: boolean[] = new Array<boolean>(n)
     for (let i = 0; i < n; i++) {
-      g[i] = Number.POSITIVE_INFINITY
       prev[i] = -1
       closed[i] = false
     }
 
-    g[startId] = 0
-
     const open = new MinHeap()
-    const h0 = heuristic(start.row, start.col, end.row, end.col, options.heuristicType) * options.heuristicWeight
-    open.push(new HeapNode(startId, h0))
+    open.push(new HeapNode(startId, heuristic(start.row, start.col, end.row, end.col, options.heuristicType)))
 
     const explored: GridPos[] = []
 
@@ -76,9 +79,6 @@ export class AStarPathfinder {
         break
       }
 
-      const baseRow = p.row
-      const baseCol = p.col
-
       for (let dr = -1; dr <= 1; dr++) {
         for (let dc = -1; dc <= 1; dc++) {
           if (dr === 0 && dc === 0) {
@@ -87,27 +87,20 @@ export class AStarPathfinder {
           if (!options.allowDiagonal && dr !== 0 && dc !== 0) {
             continue
           }
-          const nr = baseRow + dr
-          const nc = baseCol + dc
+          const nr = p.row + dr
+          const nc = p.col + dc
           if (!map.isWalkable(nr, nc)) {
-            continue
-          }
-          if (!options.allowDiagonal && (nr !== baseRow && nc !== baseCol)) {
             continue
           }
           const nid = indexOfPos(nr, nc, cols)
           if (closed[nid]) {
             continue
           }
-
-          const stepCost = (dr !== 0 && dc !== 0) ? Math.SQRT2 : 1
-          const tentative = g[id] + stepCost
-          if (tentative < g[nid]) {
-            g[nid] = tentative
+          if (prev[nid] === -1) {
             prev[nid] = id
-            const h = heuristic(nr, nc, end.row, end.col, options.heuristicType) * options.heuristicWeight
-            open.push(new HeapNode(nid, tentative + h))
           }
+          const h = heuristic(nr, nc, end.row, end.col, options.heuristicType)
+          open.push(new HeapNode(nid, h))
         }
       }
     }
@@ -127,6 +120,14 @@ export class AStarPathfinder {
     }
     path.reverse()
 
-    return { found: true, cost: g[endId], explored: explored, path: path }
+    let cost = 0
+    for (let i = 1; i < path.length; i++) {
+      const a = indexOfPos(path[i - 1].row, path[i - 1].col, cols)
+      const b = indexOfPos(path[i].row, path[i].col, cols)
+      cost += stepCost(a, b, cols)
+    }
+
+    return { found: true, cost: cost, explored: explored, path: path }
   }
 }
+

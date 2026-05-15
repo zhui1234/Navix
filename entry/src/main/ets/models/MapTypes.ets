@@ -60,6 +60,12 @@ export enum MapType {
   MAP_3D = 3
 }
 
+export enum VisualizationMode {
+  NONE = 0,
+  TIMELINE = 1,
+  OPEN_CLOSED = 2
+}
+
 export interface NavixParams {
   gridRows: number
   gridCols: number

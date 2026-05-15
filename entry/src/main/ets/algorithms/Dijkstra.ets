@@ -9,9 +9,9 @@ export class DijkstraPathfinder {
     const noHeuristic: PathfindingOptions = {
       allowDiagonal: options.allowDiagonal,
       heuristicType: 'manhattan',
-      heuristicWeight: 0
+      heuristicWeight: 0,
+      onStep: options.onStep
     }
     return this.impl.findPath(map, start, end, noHeuristic)
   }
 }
-

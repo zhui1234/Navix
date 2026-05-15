@@ -1,5 +1,6 @@
 import { NavixStore } from '../store/NavixStore'
 import { navixStore } from '../store/NavixStore'
+import { VisualizationMode } from '../models/MapTypes'
 
 @ComponentV2
 export struct TitleBar {
@@ -25,23 +26,54 @@ export struct TitleBar {
           .fontSize(18)
           .fontColor([this.store.getColor('navix_icon_color')])
           .onClick(() => {
-            this.store.currentStep = 0
+            if (this.store.visualizationMode !== VisualizationMode.NONE) {
+              this.store.prevStep()
+              return
+            }
+            this.store.setVisualizationStep(0)
           })
-        SymbolGlyph($r('sys.symbol.play_fill'))
-          .fontSize(18)
-          .fontColor([this.store.getColor('navix_icon_color')])
-          .onClick(() => {
-            this.store.runCompare()
-          })
+        if (this.store.visualizationMode !== VisualizationMode.NONE) {
+          if (this.store.visualizationPlaying) {
+            SymbolGlyph($r('sys.symbol.pause_fill'))
+              .fontSize(18)
+              .fontColor([this.store.getColor('navix_icon_color')])
+              .onClick(() => {
+                this.store.toggleVisualizationPlayback()
+              })
+          } else {
+            SymbolGlyph($r('sys.symbol.play_fill'))
+              .fontSize(18)
+              .fontColor([this.store.getColor('navix_icon_color')])
+              .onClick(() => {
+                this.store.toggleVisualizationPlayback()
+              })
+          }
+
+          SymbolGlyph($r('sys.symbol.xmark'))
+            .fontSize(18)
+            .fontColor([this.store.getColor('navix_icon_color')])
+            .onClick(() => {
+              this.store.clearVisualization()
+            })
+        } else {
+          SymbolGlyph($r('sys.symbol.play_fill'))
+            .fontSize(18)
+            .fontColor([this.store.getColor('navix_icon_color')])
+            .onClick(() => {
+              this.store.runCompare()
+            })
+        }
         SymbolGlyph($r('sys.symbol.forward_end_fill'))
           .fontSize(18)
           .fontColor([this.store.getColor('navix_icon_color')])
           .onClick(() => {
             this.store.nextStep()
           })
-        Text(`步骤 ${this.store.currentStep}/${this.store.searchSteps.length}`)
-          .fontSize(12)
-          .fontColor(this.store.getColor('navix_text_secondary'))
+        if (this.store.visualizationMode !== VisualizationMode.NONE) {
+          Text(`步骤 ${this.store.currentStep + 1}/${this.store.searchSteps.length}`)
+            .fontSize(12)
+            .fontColor(this.store.getColor('navix_text_secondary'))
+        }
       }
       Blank()
       Row({ space: 10 }) {
