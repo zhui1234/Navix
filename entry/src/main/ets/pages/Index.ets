@@ -5,6 +5,7 @@ import { RightTriggerBar } from '../components/RightTriggerBar'
 import { LeftPanel } from '../components/LeftPanel'
 import { RightPanel } from '../components/RightPanel'
 import { MainCanvas } from '../components/MainCanvas'
+import { SettingsCenterDialog } from '../components/SettingsCenterDialog'
 import { NavixStore, navixStore } from '../store/NavixStore'
 import { LeftPanelState, RightPanelState } from '../models/MapTypes'
 
@@ -15,11 +16,17 @@ struct Index {
 
   @Computed
   get leftPanelWidth(): number {
+    if (this.store.viewMode !== 'edit') {
+      return 0
+    }
     return this.store.leftPanelState === LeftPanelState.COLLAPSED ? 0 : 150
   }
 
   @Computed
   get rightPanelWidth(): number {
+    if (this.store.viewMode !== 'edit') {
+      return 0
+    }
     if (this.store.rightPanelState === RightPanelState.COLLAPSED) {
       return 0
     }
@@ -29,35 +36,45 @@ struct Index {
     return 200
   }
   build() {
-    Column() {
-      TitleBar()
+    Stack() {
+      Column() {
+        TitleBar()
 
-      Row() {
-        LeftTriggerBar()
+        Row() {
+          if (this.store.viewMode === 'edit') {
+            LeftTriggerBar()
+          }
 
-        Column() {
-          LeftPanel()
-        }
-        .width(this.leftPanelWidth)
-        .height('100%')
-
-        MainCanvas({ algorithm: null })
-          .layoutWeight(1)
+          Column() {
+            LeftPanel()
+          }
+          .width(this.leftPanelWidth)
           .height('100%')
 
-        Column() {
-          RightPanel()
-        }
-        .width(this.rightPanelWidth)
-        .height('100%')
+          MainCanvas({ algorithm: null })
+            .layoutWeight(1)
+            .height('100%')
 
-        RightTriggerBar()
+          Column() {
+            RightPanel()
+          }
+          .width(this.rightPanelWidth)
+          .height('100%')
+
+          if (this.store.viewMode === 'edit') {
+            RightTriggerBar()
+          }
+        }
+        .width('100%')
+        .height('100%')
+        .layoutWeight(1)
+
+        StatusBar()
       }
       .width('100%')
       .height('100%')
-      .layoutWeight(1)
 
-      StatusBar()
+      SettingsCenterDialog()
     }
     .width('100%')
     .height('100%')

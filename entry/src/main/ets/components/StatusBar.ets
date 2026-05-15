@@ -52,7 +52,7 @@ export struct StatusBar {
     Row() {
       SymbolGlyph($r('sys.symbol.moon_fill'))
         .fontSize(18)
-        .fontColor([this.store.theme === 'light' ? '#000000' : '#FFFFFF'])
+        .fontColor([this.store.getColor('navix_icon_color')])
         .onClick(() => {
           this.toggleTheme()
         })

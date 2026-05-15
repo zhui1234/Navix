@@ -168,6 +168,41 @@ export class NavixStore {
     }
   }
 
+  openSettingsMenu(): void {
+    this.settingsMenuOpen = true
+  }
+
+  closeSettingsMenu(): void {
+    this.settingsMenuOpen = false
+  }
+
+  openCenterDialog(type: 'settings' | 'theme' | 'view'): void {
+    this.centerDialog = type
+  }
+
+  closeCenterDialog(): void {
+    this.centerDialog = 'none'
+  }
+
+  setTheme(theme: 'light' | 'dark'): void {
+    this.theme = theme
+    this.updateParams({ theme })
+  }
+
+  setViewMode(mode: 'edit' | 'present'): void {
+    if (this.viewMode === mode) {
+      return
+    }
+    this.viewMode = mode
+    if (mode === 'present') {
+      this.leftPanelState = LeftPanelState.COLLAPSED
+      this.rightPanelState = RightPanelState.COLLAPSED
+      this.currentTool = null
+      this.selectedCell = null
+      this.selectedCellMenuOpen = false
+    }
+  }
+
   setAlgorithm(algo: AlgorithmType): void {
     if (this.currentAlgorithm === algo) {
       this.currentAlgorithm = null

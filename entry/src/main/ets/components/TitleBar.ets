@@ -80,6 +80,36 @@ export struct TitleBar {
         SymbolGlyph($r('sys.symbol.gearshape'))
           .fontSize(20)
           .fontColor([this.store.getColor('navix_icon_color')])
+          .onClick(() => {
+            this.store.openSettingsMenu()
+          })
+          .bindMenu(this.store.settingsMenuOpen, [
+            {
+              value: '设置...',
+              action: () => {
+                this.store.closeSettingsMenu()
+                this.store.openCenterDialog('settings')
+              }
+            },
+            {
+              value: '主题...',
+              action: () => {
+                this.store.closeSettingsMenu()
+                this.store.openCenterDialog('theme')
+              }
+            },
+            {
+              value: '视图模式...',
+              action: () => {
+                this.store.closeSettingsMenu()
+                this.store.openCenterDialog('view')
+              }
+            }
+          ], {
+            onDisappear: () => {
+              this.store.closeSettingsMenu()
+            }
+          })
         SymbolGlyph($r('sys.symbol.minus'))
           .fontSize(20)
           .fontColor([this.store.getColor('navix_icon_color')])

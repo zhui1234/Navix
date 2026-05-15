@@ -47,7 +47,8 @@ export struct MainCanvas {
   }
 
   canEditGrid(): boolean {
-    return this.store.currentMapType === MapType.GRID
+    return this.store.viewMode === 'edit'
+      && this.store.currentMapType === MapType.GRID
       && this.store.currentTool !== null
       && this.store.currentTool !== ToolType.SELECT
       && this.store.currentTool !== ToolType.RANDOM
