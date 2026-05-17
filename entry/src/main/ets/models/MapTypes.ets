@@ -39,7 +39,9 @@ export enum ToolType {
   ERASER = 4,
   RANDOM_OBSTACLE = 5,
   RANDOM_STARTING = 6,
-  RANDOM_FINISHING = 7
+  RANDOM_FINISHING = 7,
+  GRAPH_NODE = 8,
+  GRAPH_ERASER = 9
 }
 
 export enum AlgorithmType {
@@ -84,6 +86,7 @@ export interface NavixParams {
   backgroundColor: string
   gridLineColor: string
   showGridLines: boolean
+  graphNodeRadius: number
   theme: 'light' | 'dark'
   heuristicType: HeuristicType
   allowDiagonal: boolean

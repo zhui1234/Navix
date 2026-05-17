@@ -529,31 +529,247 @@ export struct MapSettingsPanel {
 
   @Builder
   GraphSettings() {
-    Column({ space: 8 }) {
-      Text('关系图设置区域')
-        .fontSize(12)
-        .fontColor(this.store.getColor('navix_text_secondary'))
-        .width('100%')
-        .padding({ left: 8, right: 8 })
-        .textAlign(TextAlign.Center)
+    Column({ space: 12 }) {
+      Column({ space: 4 }) {
+        Text(`方格尺寸: ${this.store.mapData.cols}×${this.store.mapData.rows}`)
+          .fontSize(11)
+          .fontColor(this.store.getColor('navix_text_secondary'))
+          .width('100%')
+          .padding({ left: 8, right: 8 })
 
-      Text('节点大小:')
-        .fontSize(12)
-        .fontColor(this.store.getColor('navix_text_primary'))
+        Text(`顶点数: ${this.store.mapData.cols + 1}×${this.store.mapData.rows + 1}`)
+          .fontSize(10)
+          .fontColor(this.store.getColor('navix_text_secondary'))
+          .width('100%')
+          .padding({ left: 8, right: 8 })
+      }
+
+      Column({ space: 4 }) {
+        Text('节点大小')
+          .fontSize(11)
+          .fontColor(this.store.getColor('navix_text_secondary'))
+          .width('100%')
+          .padding({ left: 8 })
+
+        Row({ space: 6 }) {
+          Slider({ value: this.store.params.graphNodeRadius, min: 2, max: 20, step: 1 })
+            .layoutWeight(1)
+            .onChange((value: number) => {
+              this.store.updateParams({ graphNodeRadius: Math.round(value) })
+            })
+
+          Text(`${this.store.params.graphNodeRadius}px`)
+            .fontSize(11)
+            .fontColor(this.store.getColor('navix_text_secondary'))
+            .width(44)
+            .textAlign(TextAlign.End)
+        }
+        .width('100%')
+        .padding({ left: 8, right: 8 })
+      }
+
+      Column({ space: 4 }) {
+        Text('背景颜色')
+          .fontSize(11)
+          .fontColor(this.store.getColor('navix_text_secondary'))
+          .width('100%')
+          .padding({ left: 8 })
+
+        Row({ space: 6 }) {
+          Row({ space: 6 }) {
+            ForEach(backgroundColors.slice(0, 5), (color: string) => {
+              Column()
+                .width(24)
+                .height(24)
+                .borderRadius(4)
+                .backgroundColor(color)
+                .border({
+                  width: 1,
+                  color: this.store.params.backgroundColor === color ? this.store.getColor('navix_accent_highlight') : this.store.getColor('navix_border_color')
+                })
+                .onClick(() => {
+                  this.store.updateParams({ backgroundColor: color })
+                })
+            })
+          }
+          .layoutWeight(1)
+
+          SymbolGlyph(this.showMoreBackgroundColors ? $r('sys.symbol.chevron_down') : $r('sys.symbol.chevron_left'))
+            .fontSize(12)
+            .fontColor([this.store.getColor('navix_text_secondary')])
+            .width(24)
+            .height(24)
+            .borderRadius(4)
+            .border({ width: 1, color: this.store.getColor('navix_border_color') })
+            .onClick(() => {
+              this.showMoreBackgroundColors = !this.showMoreBackgroundColors
+            })
+        }
         .width('100%')
         .padding({ left: 8, right: 8 })
 
-      Text('边样式:')
-        .fontSize(12)
-        .fontColor(this.store.getColor('navix_text_primary'))
+        if (this.showMoreBackgroundColors) {
+          Row({ space: 6 }) {
+            ForEach(backgroundColorsMore1, (color: string) => {
+              Column()
+                .width(24)
+                .height(24)
+                .borderRadius(4)
+                .backgroundColor(color)
+                .border({
+                  width: 1,
+                  color: this.store.params.backgroundColor === color ? this.store.getColor('navix_accent_highlight') : this.store.getColor('navix_border_color')
+                })
+                .onClick(() => {
+                  this.store.updateParams({ backgroundColor: color })
+                })
+            })
+          }
+          .width('100%')
+          .padding({ left: 8, right: 8 })
+
+          Row({ space: 6 }) {
+            ForEach(backgroundColorsMore2, (color: string) => {
+              Column()
+                .width(24)
+                .height(24)
+                .borderRadius(4)
+                .backgroundColor(color)
+                .border({
+                  width: 1,
+                  color: this.store.params.backgroundColor === color ? this.store.getColor('navix_accent_highlight') : this.store.getColor('navix_border_color')
+                })
+                .onClick(() => {
+                  this.store.updateParams({ backgroundColor: color })
+                })
+            })
+          }
+          .width('100%')
+          .padding({ left: 8, right: 8 })
+
+          Row({ space: 6 }) {
+            ForEach(backgroundColorsMore3, (color: string) => {
+              Column()
+                .width(24)
+                .height(24)
+                .borderRadius(4)
+                .backgroundColor(color)
+                .border({
+                  width: 1,
+                  color: this.store.params.backgroundColor === color ? this.store.getColor('navix_accent_highlight') : this.store.getColor('navix_border_color')
+                })
+                .onClick(() => {
+                  this.store.updateParams({ backgroundColor: color })
+                })
+            })
+          }
+          .width('100%')
+          .padding({ left: 8, right: 8 })
+        }
+      }
+
+      Column({ space: 4 }) {
+        Text('网格线颜色')
+          .fontSize(11)
+          .fontColor(this.store.getColor('navix_text_secondary'))
+          .width('100%')
+          .padding({ left: 8 })
+
+        Row({ space: 6 }) {
+          Row({ space: 6 }) {
+            ForEach(gridLineColors.slice(0, 5), (color: string) => {
+              Column()
+                .width(24)
+                .height(24)
+                .borderRadius(4)
+                .backgroundColor(color)
+                .border({
+                  width: 1,
+                  color: this.store.params.gridLineColor === color ? this.store.getColor('navix_accent_highlight') : this.store.getColor('navix_border_color')
+                })
+                .onClick(() => {
+                  this.store.updateParams({ gridLineColor: color })
+                })
+            })
+          }
+          .layoutWeight(1)
+
+          SymbolGlyph(this.showMoreGridLineColors ? $r('sys.symbol.chevron_down') : $r('sys.symbol.chevron_left'))
+            .fontSize(12)
+            .fontColor([this.store.getColor('navix_text_secondary')])
+            .width(24)
+            .height(24)
+            .borderRadius(4)
+            .border({ width: 1, color: this.store.getColor('navix_border_color') })
+            .onClick(() => {
+              this.showMoreGridLineColors = !this.showMoreGridLineColors
+            })
+        }
         .width('100%')
         .padding({ left: 8, right: 8 })
 
-      Text('布局算法:')
-        .fontSize(12)
-        .fontColor(this.store.getColor('navix_text_primary'))
+        if (this.showMoreGridLineColors) {
+          Row({ space: 6 }) {
+            ForEach(gridLineColorsMore1, (color: string) => {
+              Column()
+                .width(24)
+                .height(24)
+                .borderRadius(4)
+                .backgroundColor(color)
+                .border({
+                  width: 1,
+                  color: this.store.params.gridLineColor === color ? this.store.getColor('navix_accent_highlight') : this.store.getColor('navix_border_color')
+                })
+                .onClick(() => {
+                  this.store.updateParams({ gridLineColor: color })
+                })
+            })
+          }
+          .width('100%')
+          .padding({ left: 8, right: 8 })
+
+          Row({ space: 6 }) {
+            ForEach(gridLineColorsMore2, (color: string) => {
+              Column()
+                .width(24)
+                .height(24)
+                .borderRadius(4)
+                .backgroundColor(color)
+                .border({
+                  width: 1,
+                  color: this.store.params.gridLineColor === color ? this.store.getColor('navix_accent_highlight') : this.store.getColor('navix_border_color')
+                })
+                .onClick(() => {
+                  this.store.updateParams({ gridLineColor: color })
+                })
+            })
+          }
+          .width('100%')
+          .padding({ left: 8, right: 8 })
+        }
+      }
+
+      Column({ space: 4 }) {
+        Text('显示网格线')
+          .fontSize(11)
+          .fontColor(this.store.getColor('navix_text_secondary'))
+          .width('100%')
+          .padding({ left: 8 })
+
+        Row({ space: 8 }) {
+          Text(this.store.params.showGridLines ? '开启' : '关闭')
+            .fontSize(12)
+            .fontColor(this.store.params.showGridLines ? this.store.getColor('navix_button_active') : this.store.getColor('navix_text_secondary'))
+            .backgroundColor(this.store.getColor('navix_bg_canvas'))
+            .borderRadius(4)
+            .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+            .onClick(() => {
+              this.store.updateParams({ showGridLines: !this.store.params.showGridLines })
+            })
+        }
         .width('100%')
         .padding({ left: 8, right: 8 })
+      }
     }
   }
 

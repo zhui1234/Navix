@@ -64,6 +64,8 @@ export class NavixStore {
 
   @Trace mapData: MapData = this.createEmptyMap(20, 20)
   @Trace mapVersion: number = 0
+  @Trace graphNodeMask: boolean[] = []
+  @Trace graphNodeIds: number[] = []
   @Trace canvasZoomPercent: number = 100
   @Trace theme: 'light' | 'dark' = 'light'
   @Trace viewMode: 'edit' | 'present' = 'edit'
@@ -78,6 +80,7 @@ export class NavixStore {
     backgroundColor: '',
     gridLineColor: '',
     showGridLines: true,
+    graphNodeRadius: 6,
     theme: 'light',
     heuristicType: 'manhattan',
     allowDiagonal: false,
@@ -605,7 +608,32 @@ export class NavixStore {
   }
 
   setMapType(mapType: MapType): void {
+    if (this.currentMapType === mapType) {
+      return
+    }
     this.currentMapType = mapType
+    if (mapType === MapType.GRAPH) {
+      this.startPos = null
+      this.endPos = null
+      this.selectedCell = null
+      this.selectedCellMenuOpen = false
+      if (this.currentTool === ToolType.START || this.currentTool === ToolType.END || this.currentTool === ToolType.OBSTACLE || this.currentTool === ToolType.ERASER || this.currentTool === ToolType.RANDOM_OBSTACLE || this.currentTool === ToolType.RANDOM_STARTING || this.currentTool === ToolType.RANDOM_FINISHING) {
+        this.currentTool = ToolType.GRAPH_NODE
+      }
+      if (!this.params.showGridLines) {
+        this.updateParams({ showGridLines: true })
+      }
+      this.ensureGraphData(this.mapData.rows, this.mapData.cols)
+      if (this.visualizationMode !== VisualizationMode.NONE) {
+        this.clearVisualization()
+      }
+      this.compareResults = []
+    } else {
+      if (this.currentTool === ToolType.GRAPH_NODE || this.currentTool === ToolType.GRAPH_ERASER) {
+        this.currentTool = null
+      }
+    }
+    this.markMapChanged()
     this.obstacleCount = this.computeObstacleCount()
   }
 
@@ -638,6 +666,7 @@ export class NavixStore {
       backgroundColor: partial.backgroundColor !== undefined ? partial.backgroundColor : prev.backgroundColor,
       gridLineColor: partial.gridLineColor !== undefined ? partial.gridLineColor : prev.gridLineColor,
       showGridLines: partial.showGridLines !== undefined ? partial.showGridLines : prev.showGridLines,
+      graphNodeRadius: partial.graphNodeRadius !== undefined ? partial.graphNodeRadius : prev.graphNodeRadius,
       theme: partial.theme !== undefined ? partial.theme : prev.theme,
       heuristicType: partial.heuristicType !== undefined ? partial.heuristicType : prev.heuristicType,
       allowDiagonal: partial.allowDiagonal !== undefined ? partial.allowDiagonal : prev.allowDiagonal,
@@ -664,6 +693,107 @@ export class NavixStore {
       blendMode: partial.blendMode !== undefined ? partial.blendMode : prev.blendMode,
       realtimeUpdate: partial.realtimeUpdate !== undefined ? partial.realtimeUpdate : prev.realtimeUpdate,
       showLegend: partial.showLegend !== undefined ? partial.showLegend : prev.showLegend
+    }
+  }
+
+  private ensureGraphData(rows: number, cols: number): void {
+    const safeRows = rows > 0 ? rows : 1
+    const safeCols = cols > 0 ? cols : 1
+    const expected = (safeRows + 1) * (safeCols + 1)
+    if (this.graphNodeMask.length !== expected) {
+      const nextMask: boolean[] = []
+      for (let i = 0; i < expected; i++) {
+        nextMask.push(false)
+      }
+      this.graphNodeMask = nextMask
+      this.graphNodeIds = []
+    } else if (this.graphNodeIds.length > 0) {
+      const limit = expected
+      const prevIds = this.graphNodeIds
+      const nextIds: number[] = []
+      for (let i = 0; i < prevIds.length; i++) {
+        const id = prevIds[i]
+        if (id >= 0 && id < limit && this.graphNodeMask[id]) {
+          nextIds.push(id)
+        }
+      }
+      if (nextIds.length !== prevIds.length) {
+        this.graphNodeIds = nextIds
+      }
+    }
+  }
+
+  private getGraphVertexId(row: number, col: number): number {
+    const cols = this.mapData.cols
+    return row * (cols + 1) + col
+  }
+
+  hasGraphNode(row: number, col: number): boolean {
+    if (this.currentMapType !== MapType.GRAPH) {
+      return false
+    }
+    if (row < 0 || row > this.mapData.rows || col < 0 || col > this.mapData.cols) {
+      return false
+    }
+    const id = this.getGraphVertexId(row, col)
+    return id >= 0 && id < this.graphNodeMask.length && this.graphNodeMask[id]
+  }
+
+  setGraphNode(row: number, col: number, value: boolean): void {
+    if (this.currentMapType !== MapType.GRAPH) {
+      return
+    }
+    if (row < 0 || row > this.mapData.rows || col < 0 || col > this.mapData.cols) {
+      return
+    }
+    this.ensureGraphData(this.mapData.rows, this.mapData.cols)
+    const id = this.getGraphVertexId(row, col)
+    if (id < 0 || id >= this.graphNodeMask.length) {
+      return
+    }
+    const prev = this.graphNodeMask[id]
+    if (prev === value) {
+      return
+    }
+    const nextMask = this.graphNodeMask.slice()
+    nextMask[id] = value
+    this.graphNodeMask = nextMask
+    if (value) {
+      this.graphNodeIds = [...this.graphNodeIds, id]
+    } else {
+      this.graphNodeIds = this.graphNodeIds.filter((v: number) => v !== id)
+    }
+    this.markMapChanged()
+  }
+
+  clearGraphNodes(): void {
+    if (this.currentMapType !== MapType.GRAPH) {
+      return
+    }
+    this.ensureGraphData(this.mapData.rows, this.mapData.cols)
+    const expected = this.graphNodeMask.length
+    const nextMask: boolean[] = []
+    for (let i = 0; i < expected; i++) {
+      nextMask.push(false)
+    }
+    this.graphNodeMask = nextMask
+    this.graphNodeIds = []
+    this.markMapChanged()
+  }
+
+  applyGraphToolAt(row: number, col: number): void {
+    if (this.currentMapType !== MapType.GRAPH) {
+      return
+    }
+    if (this.currentTool === null || this.currentTool === ToolType.SELECT) {
+      return
+    }
+    if (this.currentTool === ToolType.GRAPH_NODE) {
+      this.setGraphNode(row, col, true)
+      return
+    }
+    if (this.currentTool === ToolType.GRAPH_ERASER) {
+      this.setGraphNode(row, col, false)
     }
   }
 
@@ -878,6 +1008,10 @@ export class NavixStore {
   }
 
   applyToolAt(row: number, col: number): void {
+    if (this.currentMapType === MapType.GRAPH) {
+      this.applyGraphToolAt(row, col)
+      return
+    }
     if (this.currentMapType !== MapType.GRID) {
       return
     }
@@ -1289,6 +1423,9 @@ export class NavixStore {
     const safeRows = rows > 0 ? rows : 20
     const safeCols = cols > 0 ? cols : 20
     this.mapData = this.createEmptyMap(safeRows, safeCols)
+    if (this.currentMapType === MapType.GRAPH) {
+      this.ensureGraphData(safeRows, safeCols)
+    }
     this.markMapChanged()
     this.updateParams({ gridRows: safeRows, gridCols: safeCols })
     this.statusText = `地图大小: ${safeCols}×${safeRows}`
@@ -1431,15 +1568,9 @@ export class NavixStore {
     const safeCols = cols > 0 ? cols : 20
     this.mapData = this.createEmptyMap(safeRows, safeCols)
     this.updateParams({ gridRows: safeRows, gridCols: safeCols })
-    
-    for (let i = 0; i < safeRows; i++) {
-      for (let j = 0; j < safeCols; j++) {
-        if (Math.random() < 0.3) {
-          this.mapData.grid[i][j] = NodeType.OBSTACLE
-        }
-      }
-    }
+    this.ensureGraphData(safeRows, safeCols)
     this.markMapChanged()
+    this.statusText = '关系图已生成'
   }
 
   generate2D5Map(rows: number = this.mapData.rows, cols: number = this.mapData.cols): void {

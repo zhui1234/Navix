@@ -33,6 +33,10 @@ export struct MainCanvas {
   private comparePathContext: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.comparePathSettings)
   private comparePathCanvasReady: boolean = false
   private comparePathDrawSignature: string = ''
+  private graphSettings: RenderingContextSettings = new RenderingContextSettings(true)
+  private graphContext: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.graphSettings)
+  private graphCanvasReady: boolean = false
+  private graphDrawSignature: string = ''
   @Local private painting: boolean = false
   @Local private lastPaintKey: string = ''
   @Local private canvasWidth: number = 0
@@ -56,6 +60,14 @@ export struct MainCanvas {
       && this.store.currentTool !== null
       && this.store.currentTool !== ToolType.SELECT
       && this.store.currentTool !== ToolType.RANDOM_OBSTACLE
+      && this.algorithm === null
+  }
+
+  canEditGraph(): boolean {
+    return this.store.viewMode === 'edit'
+      && this.store.currentMapType === MapType.GRAPH
+      && this.store.currentTool !== null
+      && this.store.currentTool !== ToolType.SELECT
       && this.algorithm === null
   }
 
@@ -246,6 +258,138 @@ export struct MainCanvas {
       ctx.lineCap = 'round'
       ctx.stroke()
       ctx.globalAlpha = 1.0
+    }
+  }
+
+  private shouldShowGraphCanvas(): boolean {
+    return this.store.currentMapType === MapType.GRAPH
+  }
+
+  private getGraphCanvasWidth(): number {
+    const cell = this.getScaledCellSize()
+    const contentW = this.store.mapData.cols * cell + 1
+    const vw = this.canvasWidth > 0 ? Math.max(1, this.canvasWidth - SCROLL_BAR_SIZE) : 1
+    return Math.max(contentW, vw)
+  }
+
+  private getGraphCanvasHeight(): number {
+    const cell = this.getScaledCellSize()
+    const contentH = this.store.mapData.rows * cell + 1
+    const vh = this.canvasHeight > 0 ? Math.max(1, this.canvasHeight - SCROLL_BAR_SIZE) : 1
+    return Math.max(contentH, vh)
+  }
+
+  private buildGraphDrawSignature(): string {
+    const cell = this.getScaledCellSize()
+    const r = this.store.params.graphNodeRadius
+    const nodes = this.store.graphNodeIds.length
+    const colors = `${this.store.params.backgroundColor}|${this.store.params.gridLineColor}`
+    const vw = this.canvasWidth > 0 ? Math.max(1, this.canvasWidth - SCROLL_BAR_SIZE) : 1
+    const vh = this.canvasHeight > 0 ? Math.max(1, this.canvasHeight - SCROLL_BAR_SIZE) : 1
+    return `${this.store.mapVersion}-${this.store.mapData.rows}x${this.store.mapData.cols}-${cell}-${r}-${nodes}-${this.store.params.showGridLines ? 1 : 0}-${this.store.theme}-${colors}-${vw}x${vh}`
+  }
+
+  private getGraphBackgroundColor(): string {
+    if (this.store.theme === 'light') {
+      return this.store.params.backgroundColor || '#FFFFFF'
+    }
+    return this.store.params.backgroundColor || '#1A1A1A'
+  }
+
+  private getGraphGridLineColor(): string {
+    return this.store.params.gridLineColor || this.store.getColor('navix_grid_line')
+  }
+
+  private getGraphNodeRadius(): number {
+    const r = this.store.params.graphNodeRadius
+    const scaled = Math.round(r * this.store.canvasZoomPercent / 100)
+    return Math.max(2, scaled)
+  }
+
+  private drawGraphCanvas(): void {
+    if (!this.graphCanvasReady) {
+      return
+    }
+    if (!this.shouldShowGraphCanvas()) {
+      return
+    }
+    const sig = this.buildGraphDrawSignature()
+    if (sig === this.graphDrawSignature) {
+      return
+    }
+    this.graphDrawSignature = sig
+
+    const cell = this.getScaledCellSize()
+    const cols = this.store.mapData.cols
+    const ctx = this.graphContext
+    ctx.clearRect(0, 0, ctx.width, ctx.height)
+
+    ctx.fillStyle = this.getGraphBackgroundColor()
+    ctx.fillRect(0, 0, ctx.width, ctx.height)
+
+    if (this.store.params.showGridLines) {
+      const maxCols = Math.ceil(ctx.width / cell)
+      const maxRows = Math.ceil(ctx.height / cell)
+      ctx.beginPath()
+      for (let c = 0; c <= maxCols; c++) {
+        const x = c * cell + 0.5
+        ctx.moveTo(x, 0)
+        ctx.lineTo(x, ctx.height)
+      }
+      for (let r = 0; r <= maxRows; r++) {
+        const y = r * cell + 0.5
+        ctx.moveTo(0, y)
+        ctx.lineTo(ctx.width, y)
+      }
+      ctx.lineWidth = 1
+      ctx.strokeStyle = this.getGraphGridLineColor()
+      ctx.stroke()
+    }
+
+    if (this.store.graphNodeIds.length > 0) {
+      const radius = this.getGraphNodeRadius()
+      ctx.fillStyle = this.store.getColor('navix_accent_highlight')
+      for (let i = 0; i < this.store.graphNodeIds.length; i++) {
+        const id = this.store.graphNodeIds[i]
+        const vr = Math.floor(id / (cols + 1))
+        const vc = id - vr * (cols + 1)
+        const x = vc * cell
+        const y = vr * cell
+        ctx.beginPath()
+        ctx.arc(x, y, radius, 0, Math.PI * 2)
+        ctx.fill()
+      }
+    }
+  }
+
+  @Builder
+  GraphCanvas() {
+    if (this.shouldShowGraphCanvas()) {
+      Stack() {
+        Canvas(this.graphContext)
+          .width(this.getGraphCanvasWidth())
+          .height(this.getGraphCanvasHeight())
+          .position({ x: 0, y: 0 })
+          .hitTestBehavior(HitTestMode.Transparent)
+          .onReady(() => {
+            this.graphCanvasReady = true
+            this.graphDrawSignature = ''
+            this.drawGraphCanvas()
+          })
+
+        ForEach([this.buildGraphDrawSignature()], (_sig: string) => {
+          Text('')
+            .width(0)
+            .height(0)
+            .opacity(0)
+            .onAppear(() => {
+              this.drawGraphCanvas()
+            })
+        }, (sig: string) => sig)
+      }
+      .width(this.getGraphCanvasWidth())
+      .height(this.getGraphCanvasHeight())
+      .alignContent(Alignment.TopStart)
     }
   }
 
@@ -508,6 +652,34 @@ export struct MainCanvas {
     this.store.applyToolAt(row, col)
   }
 
+  applyGraphAtPoint(x: number, y: number): void {
+    const size = this.getScaledCellSize()
+    if (size <= 0) {
+      return
+    }
+    const offsetX = this.horizontalScroller.currentOffset().xOffset
+    const offsetY = this.verticalScroller.currentOffset().yOffset
+    const px = x + offsetX
+    const py = y + offsetY
+    const col = Math.round(px / size)
+    const row = Math.round(py / size)
+    if (row < 0 || row > this.store.mapData.rows || col < 0 || col > this.store.mapData.cols) {
+      return
+    }
+    const dx = px - col * size
+    const dy = py - row * size
+    const threshold = Math.max(6, Math.round(size * 0.25))
+    if (dx * dx + dy * dy > threshold * threshold) {
+      return
+    }
+    const key = `${row}-${col}`
+    if (key === this.lastPaintKey) {
+      return
+    }
+    this.lastPaintKey = key
+    this.store.applyGraphToolAt(row, col)
+  }
+
   getMinimapColor(type: NodeType): string {
     if (this.store.theme === 'light') {
       switch (type) {
@@ -560,6 +732,14 @@ export struct MainCanvas {
   }
 
   getMinimapCellColorAt(r: number, c: number): string {
+    if (this.store.currentMapType === MapType.GRAPH) {
+      const rr = Math.floor(r / MINIMAP_CELLS * (this.store.mapData.rows + 1))
+      const cc = Math.floor(c / MINIMAP_CELLS * (this.store.mapData.cols + 1))
+      if (this.store.hasGraphNode(rr, cc)) {
+        return this.store.getColor('navix_accent_highlight')
+      }
+      return this.getMinimapColor(NodeType.EMPTY)
+    }
     const rr = Math.floor(r / MINIMAP_CELLS * this.store.mapData.rows)
     const cc = Math.floor(c / MINIMAP_CELLS * this.store.mapData.cols)
     return this.getMinimapColor(this.store.mapData.grid[rr][cc])
@@ -650,58 +830,77 @@ export struct MainCanvas {
         Scroll(this.horizontalScroller) {
           Scroll(this.verticalScroller) {
             Stack() {
-              Column({ space: 0 }) {
-                ForEach(this.store.mapData.grid, (row: NodeType[], rowIndex: number) => {
-                  Row({ space: 0 }) {
-                    ForEach(row, (cell: NodeType, colIndex: number) => {
-                      if (this.algorithm === null && this.store.currentTool === ToolType.SELECT) {
-                        if (this.isCellSelected(rowIndex, colIndex)) {
-                          Stack() {
-                            Column()
-                              .width('100%')
-                              .height('100%')
-                              .backgroundColor(this.getCellColor(this.getDisplayNodeType(rowIndex, colIndex, cell)))
-                            this.VisualizationOverlay(rowIndex, colIndex, cell)
-                            Column()
-                              .width('100%')
-                              .height('100%')
-                              .border({ width: 2, color: this.store.getColor('navix_accent_highlight') })
-                              .backgroundColor(Color.Transparent)
+              if (this.store.currentMapType === MapType.GRID) {
+                Column({ space: 0 }) {
+                  ForEach(this.store.mapData.grid, (row: NodeType[], rowIndex: number) => {
+                    Row({ space: 0 }) {
+                      ForEach(row, (cell: NodeType, colIndex: number) => {
+                        if (this.algorithm === null && this.store.currentTool === ToolType.SELECT) {
+                          if (this.isCellSelected(rowIndex, colIndex)) {
+                            Stack() {
+                              Column()
+                                .width('100%')
+                                .height('100%')
+                                .backgroundColor(this.getCellColor(this.getDisplayNodeType(rowIndex, colIndex, cell)))
+                              this.VisualizationOverlay(rowIndex, colIndex, cell)
+                              Column()
+                                .width('100%')
+                                .height('100%')
+                                .border({ width: 2, color: this.store.getColor('navix_accent_highlight') })
+                                .backgroundColor(Color.Transparent)
+                            }
+                              .width(this.getScaledCellSize())
+                              .height(this.getScaledCellSize())
+                              .border({
+                                width: this.store.params.showGridLines ? 1 : 0,
+                                color: this.store.params.gridLineColor || this.store.getColor('navix_grid_line')
+                              })
+                              .onClick(() => {
+                                this.store.selectCell(rowIndex, colIndex)
+                                this.store.openSelectedCellMenu()
+                              })
+                              .bindMenu(this.store.selectedCellMenuOpen && this.isCellSelected(rowIndex, colIndex), [
+                                {
+                                  value: '设为障碍',
+                                  action: () => {
+                                    this.store.setCellAsObstacle(rowIndex, colIndex)
+                                  }
+                                },
+                                {
+                                  value: '设为起点',
+                                  action: () => {
+                                    this.store.setCellAsStart(rowIndex, colIndex)
+                                  }
+                                },
+                                {
+                                  value: '设为终点',
+                                  action: () => {
+                                    this.store.setCellAsEnd(rowIndex, colIndex)
+                                  }
+                                }
+                              ], {
+                                onDisappear: () => {
+                                  this.store.closeSelectedCellMenu()
+                                }
+                              })
+                          } else {
+                            Stack() {
+                              Column()
+                                .width('100%')
+                                .height('100%')
+                                .backgroundColor(this.getCellColor(this.getDisplayNodeType(rowIndex, colIndex, cell)))
+                              this.VisualizationOverlay(rowIndex, colIndex, cell)
+                            }
+                              .width(this.getScaledCellSize())
+                              .height(this.getScaledCellSize())
+                              .border({
+                                width: this.store.params.showGridLines ? 1 : 0,
+                                color: this.store.params.gridLineColor || this.store.getColor('navix_grid_line')
+                              })
+                              .onClick(() => {
+                                this.store.selectCell(rowIndex, colIndex)
+                              })
                           }
-                            .width(this.getScaledCellSize())
-                            .height(this.getScaledCellSize())
-                            .border({
-                              width: this.store.params.showGridLines ? 1 : 0,
-                              color: this.store.params.gridLineColor || this.store.getColor('navix_grid_line')
-                            })
-                            .onClick(() => {
-                              this.store.selectCell(rowIndex, colIndex)
-                              this.store.openSelectedCellMenu()
-                            })
-                            .bindMenu(this.store.selectedCellMenuOpen && this.isCellSelected(rowIndex, colIndex), [
-                              {
-                                value: '设为障碍',
-                                action: () => {
-                                  this.store.setCellAsObstacle(rowIndex, colIndex)
-                                }
-                              },
-                              {
-                                value: '设为起点',
-                                action: () => {
-                                  this.store.setCellAsStart(rowIndex, colIndex)
-                                }
-                              },
-                              {
-                                value: '设为终点',
-                                action: () => {
-                                  this.store.setCellAsEnd(rowIndex, colIndex)
-                                }
-                              }
-                            ], {
-                              onDisappear: () => {
-                                this.store.closeSelectedCellMenu()
-                              }
-                            })
                         } else {
                           Stack() {
                             Column()
@@ -717,39 +916,29 @@ export struct MainCanvas {
                               color: this.store.params.gridLineColor || this.store.getColor('navix_grid_line')
                             })
                             .onClick(() => {
-                              this.store.selectCell(rowIndex, colIndex)
+                              if (this.algorithm !== null) {
+                                return
+                              }
+                              if (this.store.currentTool === ToolType.RANDOM_OBSTACLE) {
+                                return
+                              }
+                              this.store.applyToolAt(rowIndex, colIndex)
                             })
                         }
-                      } else {
-                        Stack() {
-                          Column()
-                            .width('100%')
-                            .height('100%')
-                            .backgroundColor(this.getCellColor(this.getDisplayNodeType(rowIndex, colIndex, cell)))
-                          this.VisualizationOverlay(rowIndex, colIndex, cell)
-                        }
-                          .width(this.getScaledCellSize())
-                          .height(this.getScaledCellSize())
-                          .border({
-                            width: this.store.params.showGridLines ? 1 : 0,
-                            color: this.store.params.gridLineColor || this.store.getColor('navix_grid_line')
-                          })
-                          .onClick(() => {
-                            if (this.algorithm !== null) {
-                              return
-                            }
-                            if (this.store.currentTool === ToolType.RANDOM_OBSTACLE) {
-                              return
-                            }
-                            this.store.applyToolAt(rowIndex, colIndex)
-                          })
-                      }
-                    }, (_cell: NodeType, colIndex: number) => `${this.store.mapVersion}-${rowIndex}-${colIndex}`)
-                  }
-                }, (_row: NodeType[], rowIndex: number) => `${this.store.mapVersion}-${rowIndex}`)
-              }
+                      }, (_cell: NodeType, colIndex: number) => `${this.store.mapVersion}-${rowIndex}-${colIndex}`)
+                    }
+                  }, (_row: NodeType[], rowIndex: number) => `${this.store.mapVersion}-${rowIndex}`)
+                }
 
-              this.ComparePathPolylineOverlay()
+                this.ComparePathPolylineOverlay()
+              } else if (this.store.currentMapType === MapType.GRAPH) {
+                this.GraphCanvas()
+              } else {
+                Column()
+                  .width(this.store.mapData.cols * this.getScaledCellSize())
+                  .height(this.store.mapData.rows * this.getScaledCellSize())
+                  .backgroundColor(this.store.getColor('navix_bg_canvas'))
+              }
             }
             .alignContent(Alignment.TopStart)
             .margin({ right: 10, bottom: 10 })
@@ -760,22 +949,32 @@ export struct MainCanvas {
                 } catch (_err) {
                 }
               }
-              if (!this.canEditGrid()) {
-                return
-              }
               const t = event.touches?.[0]
               if (!t) {
+                return
+              }
+              const editGrid = this.canEditGrid()
+              const editGraph = !editGrid && this.canEditGraph()
+              if (!editGrid && !editGraph) {
                 return
               }
               if (event.type === TouchType.Down) {
                 this.painting = true
                 this.lastPaintKey = ''
-                this.applyAtPoint(t.x, t.y)
+                if (editGrid) {
+                  this.applyAtPoint(t.x, t.y)
+                } else {
+                  this.applyGraphAtPoint(t.x, t.y)
+                }
                 return
               }
               if (event.type === TouchType.Move) {
                 if (this.painting) {
-                  this.applyAtPoint(t.x, t.y)
+                  if (editGrid) {
+                    this.applyAtPoint(t.x, t.y)
+                  } else {
+                    this.applyGraphAtPoint(t.x, t.y)
+                  }
                 }
                 return
               }
