@@ -63,7 +63,34 @@ export struct SettingsCenterDialog {
     if (this.store.centerDialog === 'view') {
       return '视图模式'
     }
+    if (this.store.centerDialog === 'usage') {
+      return '使用说明'
+    }
+    if (this.store.centerDialog === 'shortcuts') {
+      return '快捷键列表'
+    }
+    if (this.store.centerDialog === 'about') {
+      return '关于'
+    }
     return ''
+  }
+
+  @Builder
+  ShortcutRow(keyText: string, desc: string, header: boolean) {
+    Row({ space: 0 }) {
+      Text(keyText)
+        .fontSize(12)
+        .fontWeight(header ? FontWeight.Medium : FontWeight.Normal)
+        .fontColor(this.store.getColor('navix_text_primary'))
+        .width(110)
+      Text(desc)
+        .fontSize(12)
+        .fontWeight(header ? FontWeight.Medium : FontWeight.Normal)
+        .fontColor(this.store.getColor('navix_text_primary'))
+        .layoutWeight(1)
+    }
+    .width('100%')
+    .padding({ left: 10, right: 10, top: 8, bottom: 8 })
   }
 
   build() {
@@ -109,6 +136,60 @@ export struct SettingsCenterDialog {
               this.DialogOption('演示视图', this.store.viewMode === 'present', () => this.applyViewMode('present'))
             }
             .width('100%')
+          } else if (this.store.centerDialog === 'usage') {
+            Text('Navix 是一个用于路径规划与搜索算法对比/可视化的实验平台。通过工具栏编辑地图，通过算法栏选择算法并运行，可在演示模式下查看搜索过程。')
+              .fontSize(14)
+              .fontColor(this.store.getColor('navix_text_secondary'))
+              .lineHeight(20)
+          } else if (this.store.centerDialog === 'shortcuts') {
+            Column({ space: 0 }) {
+              this.ShortcutRow('快捷键', '功能', true)
+              Divider()
+                .color(this.store.getColor('navix_border_color'))
+              this.ShortcutRow('Space', '开始/暂停动画', false)
+              Divider()
+                .color(this.store.getColor('navix_border_color'))
+              this.ShortcutRow('=(+)', '放大网格', false)
+              Divider()
+                .color(this.store.getColor('navix_border_color'))
+              this.ShortcutRow('-(_)', '缩小网格', false)
+              Divider()
+                .color(this.store.getColor('navix_border_color'))
+              this.ShortcutRow('数字', '选择算法', false)
+            }
+            .width('100%')
+            .borderRadius(8)
+            .backgroundColor(this.store.getColor('navix_bg_canvas'))
+            .border({ width: 1, color: this.store.getColor('navix_border_color') })
+            .clip(true)
+          } else if (this.store.centerDialog === 'about') {
+            Column({ space: 10 }) {
+              Text('应用名称：Navix — 智能算法实验平台')
+                .fontSize(14)
+                .fontColor(this.store.getColor('navix_text_primary'))
+                .fontWeight(FontWeight.Medium)
+                .width('100%')
+              Text('版本号: v1.0.0')
+                .fontSize(13)
+                .fontColor(this.store.getColor('navix_text_secondary'))
+                .width('100%')
+              Text('简介: 鸿蒙空间智能算法可视化实验工具')
+                .fontSize(13)
+                .fontColor(this.store.getColor('navix_text_secondary'))
+                .width('100%')
+              Text('开发者: 瓜兵永不言弃')
+                .fontSize(13)
+                .fontColor(this.store.getColor('navix_text_secondary'))
+                .width('100%')
+              Divider()
+                .color(this.store.getColor('navix_border_color'))
+              Text('开源协议')
+                .fontSize(13)
+                .fontColor(this.store.getColor('navix_text_secondary'))
+                .width('100%')
+            }
+            .width('100%')
+            .alignItems(HorizontalAlign.Start)
           }
         }
         .width(320)

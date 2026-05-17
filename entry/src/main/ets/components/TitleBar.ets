@@ -5,6 +5,29 @@ import { VisualizationMode } from '../models/MapTypes'
 @ComponentV2
 export struct TitleBar {
   @Local store: NavixStore = navixStore
+  @Local hoveredMenu: 'file' | 'tools' | 'algorithms' | 'map' | 'help' | null = null
+
+  @Builder
+  MenuTab(label: string, key: 'file' | 'tools' | 'algorithms' | 'map' | 'help') {
+    Text(label)
+      .fontSize(13)
+      .fontColor(this.store.getColor('navix_text_primary'))
+      .padding({ left: 8, right: 8, top: 6, bottom: 6 })
+      .width(64)
+      .textAlign(TextAlign.Center)
+      .borderRadius(6)
+      .backgroundColor(
+        this.store.titleMenuActive === key
+          ? this.store.getColor('navix_border_color')
+          : (this.hoveredMenu === key ? this.store.getColor('navix_bg_panel') : Color.Transparent)
+      )
+      .onHover((isHover: boolean) => {
+        this.hoveredMenu = isHover ? key : null
+      })
+      .onClick(() => {
+        this.store.openTitleMenu(key)
+      })
+  }
 
   build() {
     Row() {
@@ -13,12 +36,22 @@ export struct TitleBar {
           .width(24)
           .height(24)
           .objectFit(ImageFit.Contain)
-        SymbolGlyph($r('sys.symbol.square_grid_2x2'))
+        SymbolGlyph($r('sys.symbol.list_bullet'))
           .fontSize(20)
           .fontColor([this.store.getColor('navix_icon_color')])
-        SymbolGlyph($r('sys.symbol.lightbulb'))
-          .fontSize(20)
-          .fontColor([this.store.getColor('navix_icon_color')])
+          .onClick(() => {
+            this.store.toggleTitleMenuExpanded()
+          })
+
+        if (this.store.titleMenuExpanded) {
+          Row({ space: 6 }) {
+            this.MenuTab('文件', 'file')
+            this.MenuTab('工具', 'tools')
+            this.MenuTab('算法', 'algorithms')
+            this.MenuTab('地图', 'map')
+            this.MenuTab('帮助', 'help')
+          }
+        }
       }
       Blank()
       Row({ space: 6 }) {

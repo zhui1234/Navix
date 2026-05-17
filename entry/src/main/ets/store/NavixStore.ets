@@ -20,6 +20,7 @@ import { BFSPathfinder } from '../algorithms/BFS'
 import { DFSPathfinder } from '../algorithms/DFS'
 import { GreedyBFSPathfinder } from '../algorithms/GreedyBFS'
 import { IDAStarPathfinder } from '../algorithms/IDAStar'
+import { DStarLitePathfinder, DStarLitePlanner } from '../algorithms/DStarLite'
 
 export class AlgorithmCompareResult {
   algoId: string
@@ -62,7 +63,9 @@ export class NavixStore {
   @Trace theme: 'light' | 'dark' = 'light'
   @Trace viewMode: 'edit' | 'present' = 'edit'
   @Trace settingsMenuOpen: boolean = false
-  @Trace centerDialog: 'none' | 'settings' | 'theme' | 'view' = 'none'
+  @Trace centerDialog: 'none' | 'settings' | 'theme' | 'view' | 'usage' | 'shortcuts' | 'about' = 'none'
+  @Trace titleMenuExpanded: boolean = false
+  @Trace titleMenuActive: 'none' | 'file' | 'tools' | 'algorithms' | 'map' | 'help' = 'none'
   @Trace params: NavixParams = {
     gridRows: 20,
     gridCols: 20,
@@ -107,6 +110,10 @@ export class NavixStore {
   private visualizationExploredIds: number[] = []
   private visualizationPathIds: number[] = []
   private visualizationTimerId: number = -1
+  private dStarLitePlanner: DStarLitePlanner | null = null
+  private dStarLitePendingCells: GridPos[] = []
+  private dStarLitePendingStart: GridPos | null = null
+  private dStarLitePendingGoal: GridPos | null = null
 
   private createEmptyMap(rows: number, cols: number): MapData {
     const grid: NodeType[][] = []
@@ -176,12 +183,29 @@ export class NavixStore {
     this.settingsMenuOpen = false
   }
 
-  openCenterDialog(type: 'settings' | 'theme' | 'view'): void {
+  openCenterDialog(type: 'settings' | 'theme' | 'view' | 'usage' | 'shortcuts' | 'about'): void {
     this.centerDialog = type
   }
 
   closeCenterDialog(): void {
     this.centerDialog = 'none'
+  }
+
+  toggleTitleMenuExpanded(): void {
+    const next = !this.titleMenuExpanded
+    this.titleMenuExpanded = next
+    if (!next) {
+      this.titleMenuActive = 'none'
+    }
+  }
+
+  openTitleMenu(menu: 'file' | 'tools' | 'algorithms' | 'map' | 'help'): void {
+    this.titleMenuExpanded = true
+    this.titleMenuActive = menu
+  }
+
+  closeTitleMenu(): void {
+    this.titleMenuActive = 'none'
   }
 
   setTheme(theme: 'light' | 'dark'): void {
@@ -229,6 +253,19 @@ export class NavixStore {
       return '1.00'
     }
     return weight.toFixed(2)
+  }
+
+  getDefaultIDAStarWeight(): number {
+    const prev = this.idaStarWeights
+    if (prev.length === 0) {
+      return 1.0
+    }
+    for (let i = 0; i < prev.length; i++) {
+      if (Math.abs(prev[i] - 1.0) < 1e-6) {
+        return prev[i]
+      }
+    }
+    return prev[0]
   }
 
   createAStarSpec(heuristicType: HeuristicType): AlgorithmSpec {
@@ -388,6 +425,9 @@ export class NavixStore {
     if (spec.type === AlgorithmType.DIJKSTRA) {
       return '#F97316'
     }
+    if (spec.type === AlgorithmType.DSTAR_LITE) {
+      return '#0F766E'
+    }
     if (spec.type === AlgorithmType.BFS) {
       return '#22C55E'
     }
@@ -438,7 +478,7 @@ export class NavixStore {
       let res: PathfindingResult | null = null
       let elapsedMs: number = 0
       const heuristicType = spec.type === AlgorithmType.ASTAR && spec.heuristicType ? spec.heuristicType : this.params.heuristicType
-      const heuristicWeight = spec.type === AlgorithmType.IDA_STAR && spec.weight !== undefined ? spec.weight : this.params.heuristicWeight
+      const heuristicWeight = spec.type === AlgorithmType.IDA_STAR && spec.weight !== undefined ? spec.weight : (spec.type === AlgorithmType.DSTAR_LITE ? 1.0 : this.params.heuristicWeight)
       const opts: PathfindingOptions = {
         allowDiagonal: this.params.allowDiagonal,
         heuristicType: heuristicType,
@@ -452,6 +492,10 @@ export class NavixStore {
       } else if (spec.type === AlgorithmType.DIJKSTRA) {
         const t0 = Date.now()
         res = new DijkstraPathfinder().findPath(map, this.startPos, this.endPos, opts)
+        elapsedMs = Date.now() - t0
+      } else if (spec.type === AlgorithmType.DSTAR_LITE) {
+        const t0 = Date.now()
+        res = new DStarLitePathfinder().findPath(map, this.startPos, this.endPos, opts)
         elapsedMs = Date.now() - t0
       } else if (spec.type === AlgorithmType.BFS) {
         const t0 = Date.now()
@@ -593,18 +637,111 @@ export class NavixStore {
     if (this.compareResults.length > 0) {
       this.compareResults = []
     }
-    if (this.visualizationMode !== VisualizationMode.NONE) {
+    if (this.visualizationMode !== VisualizationMode.NONE && this.visualizationAlgorithmId !== null) {
+      const spec = this.getAlgorithmSpecById(this.visualizationAlgorithmId)
+      if (spec && spec.type === AlgorithmType.DSTAR_LITE && this.dStarLitePlanner && this.startPos && this.endPos) {
+        this.applyDStarLitePendingUpdates(spec)
+        return
+      }
       this.clearVisualization()
     }
   }
 
   updateCell(row: number, col: number, type: NodeType): void {
     if (row >= 0 && row < this.mapData.rows && col >= 0 && col < this.mapData.cols) {
-      if (this.mapData.grid[row][col] !== type) {
+      const prevType = this.mapData.grid[row][col]
+      if (prevType !== type) {
+        if (this.visualizationMode !== VisualizationMode.NONE && this.visualizationAlgorithmId !== null) {
+          const spec = this.getAlgorithmSpecById(this.visualizationAlgorithmId)
+          if (spec && spec.type === AlgorithmType.DSTAR_LITE) {
+            const wasWalkable = prevType !== NodeType.OBSTACLE
+            const isWalkable = type !== NodeType.OBSTACLE
+            if (wasWalkable !== isWalkable) {
+              this.dStarLitePendingCells.push({ row, col })
+            }
+            if (type === NodeType.START && this.startPos) {
+              this.dStarLitePendingStart = { row: this.startPos.row, col: this.startPos.col }
+            }
+            if (type === NodeType.END && this.endPos) {
+              this.dStarLitePendingGoal = { row: this.endPos.row, col: this.endPos.col }
+            }
+          }
+        }
         this.mapData.grid[row][col] = type
         this.markMapChanged()
       }
     }
+  }
+
+  private applyDStarLitePendingUpdates(spec: AlgorithmSpec): void {
+    if (!this.dStarLitePlanner || !this.startPos || !this.endPos) {
+      this.clearVisualization()
+      return
+    }
+
+    if (this.dStarLitePendingGoal) {
+      this.dStarLitePendingCells = []
+      this.dStarLitePendingStart = null
+      this.dStarLitePendingGoal = null
+      this.restartVisualization()
+      return
+    }
+
+    if (this.dStarLitePendingStart) {
+      this.dStarLitePlanner.moveStart(this.dStarLitePendingStart)
+      this.dStarLitePendingStart = null
+    }
+
+    for (let i = 0; i < this.dStarLitePendingCells.length; i++) {
+      const p = this.dStarLitePendingCells[i]
+      this.dStarLitePlanner.notifyCellChanged(p.row, p.col)
+    }
+    this.dStarLitePendingCells = []
+
+    const exploredIds: number[] = []
+    const heuristicType = spec.heuristicType ? spec.heuristicType : this.params.heuristicType
+    const opts: PathfindingOptions = {
+      allowDiagonal: this.params.allowDiagonal,
+      heuristicType: heuristicType,
+      heuristicWeight: this.params.heuristicWeight,
+      onStep: (currentId: number, _openIds: number[]) => {
+        exploredIds.push(currentId)
+      }
+    }
+
+    const out = this.dStarLitePlanner.replan(opts)
+    const res = out.result
+
+    const prevSteps = this.searchSteps
+    const nextSteps: GridPos[][] = []
+    for (let i = 0; i < prevSteps.length; i++) {
+      nextSteps.push(prevSteps[i])
+    }
+    for (let i = 0; i < res.explored.length; i++) {
+      nextSteps.push([res.explored[i]])
+    }
+
+    const prevExplored = this.visualizationExploredIds
+    const nextExplored: number[] = []
+    for (let i = 0; i < prevExplored.length; i++) {
+      nextExplored.push(prevExplored[i])
+    }
+    for (let i = 0; i < exploredIds.length; i++) {
+      nextExplored.push(exploredIds[i])
+    }
+
+    const pathIds: number[] = []
+    for (let i = 0; i < res.path.length; i++) {
+      pathIds.push(res.path[i].row * this.mapData.cols + res.path[i].col)
+    }
+
+    this.visualizationExploredIds = nextExplored
+    this.visualizationPathIds = pathIds
+    this.visualizationFound = res.found
+    this.searchSteps = nextSteps
+    this.ensureVisualizationMasks()
+    this.setVisualizationStep(this.currentStep)
+    this.statusText = 'D* Lite 已重新规划'
   }
 
   selectCell(row: number, col: number): void {
@@ -858,6 +995,10 @@ export class NavixStore {
     this.visualizationFound = false
     this.visualizationExploredIds = []
     this.visualizationPathIds = []
+    this.dStarLitePlanner = null
+    this.dStarLitePendingCells = []
+    this.dStarLitePendingStart = null
+    this.dStarLitePendingGoal = null
   }
 
   restartVisualization(): void {
@@ -888,18 +1029,19 @@ export class NavixStore {
     }
     if (!(spec.type === AlgorithmType.ASTAR
       || spec.type === AlgorithmType.DIJKSTRA
+      || spec.type === AlgorithmType.DSTAR_LITE
       || spec.type === AlgorithmType.BFS
       || spec.type === AlgorithmType.DFS
       || spec.type === AlgorithmType.GREEDY_BFS
       || spec.type === AlgorithmType.IDA_STAR)) {
-      this.statusText = '当前仅实现 A* / Dijkstra / BFS / DFS / 贪心BFS / IDA* 的可视化'
+      this.statusText = '当前仅实现 A* / Dijkstra / D* Lite / BFS / DFS / 贪心BFS / IDA* 的可视化'
       return
     }
 
     const map = new GridMapFromMapData(this.mapData)
     const exploredIds: number[] = []
     const heuristicType = spec.type === AlgorithmType.ASTAR && spec.heuristicType ? spec.heuristicType : this.params.heuristicType
-    const heuristicWeight = spec.type === AlgorithmType.IDA_STAR && spec.weight !== undefined ? spec.weight : this.params.heuristicWeight
+    const heuristicWeight = spec.type === AlgorithmType.IDA_STAR && spec.weight !== undefined ? spec.weight : (spec.type === AlgorithmType.DSTAR_LITE ? 1.0 : this.params.heuristicWeight)
     const opts: PathfindingOptions = {
       allowDiagonal: this.params.allowDiagonal,
       heuristicType: heuristicType,
@@ -911,14 +1053,25 @@ export class NavixStore {
 
     let res: PathfindingResult
     if (spec.type === AlgorithmType.ASTAR) {
+      this.dStarLitePlanner = null
       res = new AStarPathfinder().findPath(map, this.startPos, this.endPos, opts)
     } else if (spec.type === AlgorithmType.DIJKSTRA) {
+      this.dStarLitePlanner = null
       res = new DijkstraPathfinder().findPath(map, this.startPos, this.endPos, opts)
+    } else if (spec.type === AlgorithmType.DSTAR_LITE) {
+      this.dStarLitePendingCells = []
+      this.dStarLitePendingStart = null
+      this.dStarLitePendingGoal = null
+      this.dStarLitePlanner = new DStarLitePlanner(map, this.startPos, this.endPos, opts)
+      res = this.dStarLitePlanner.replan(opts).result
     } else if (spec.type === AlgorithmType.BFS) {
+      this.dStarLitePlanner = null
       res = new BFSPathfinder().findPath(map, this.startPos, this.endPos, opts)
     } else if (spec.type === AlgorithmType.DFS) {
+      this.dStarLitePlanner = null
       res = new DFSPathfinder().findPath(map, this.startPos, this.endPos, opts)
     } else {
+      this.dStarLitePlanner = null
       if (spec.type === AlgorithmType.GREEDY_BFS) {
         res = new GreedyBFSPathfinder().findPath(map, this.startPos, this.endPos, opts)
       } else {

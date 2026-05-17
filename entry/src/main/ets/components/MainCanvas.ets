@@ -615,6 +615,12 @@ export struct MainCanvas {
             .alignItems(HorizontalAlign.Start)
             .margin({ right: 10, bottom: 10 })
             .onTouch((event: TouchEvent) => {
+              if (event.type === TouchType.Down) {
+                try {
+                  this.getUIContext().getFocusController().requestFocus('navixRoot')
+                } catch (_err) {
+                }
+              }
               if (!this.canEditGrid()) {
                 return
               }

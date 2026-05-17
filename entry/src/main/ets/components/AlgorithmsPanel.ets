@@ -165,6 +165,13 @@ export struct AlgorithmsPanel {
   @Builder
   AStarGroup() {
     Row() {
+      SymbolGlyph(this.showAStar ? $r('sys.symbol.chevron_down') : $r('sys.symbol.chevron_right'))
+        .fontSize(14)
+        .fontColor([this.store.getColor('navix_icon_color')])
+        .onClick(() => {
+          this.showAStar = !this.showAStar
+        })
+
       Column({ space: 2 }) {
         Text('A*')
           .fontSize(12)
@@ -182,13 +189,6 @@ export struct AlgorithmsPanel {
       .onClick(() => {
         this.store.toggleCompareAlgorithm(this.store.createAStarSpec('manhattan'))
       })
-
-      SymbolGlyph(this.showAStar ? $r('sys.symbol.chevron_down') : $r('sys.symbol.chevron_left'))
-        .fontSize(14)
-        .fontColor([this.store.getColor('navix_icon_color')])
-        .onClick(() => {
-          this.showAStar = !this.showAStar
-        })
     }
     .width('100%')
     .padding({ left: 10, right: 10, top: 7, bottom: 7 })
@@ -248,6 +248,13 @@ export struct AlgorithmsPanel {
   @Builder
   IDAStarGroup() {
     Row() {
+      SymbolGlyph(this.showIDAStar ? $r('sys.symbol.chevron_down') : $r('sys.symbol.chevron_right'))
+        .fontSize(14)
+        .fontColor([this.store.getColor('navix_icon_color')])
+        .onClick(() => {
+          this.showIDAStar = !this.showIDAStar
+        })
+
       Column({ space: 2 }) {
         Text('IDA*')
           .fontSize(12)
@@ -266,13 +273,6 @@ export struct AlgorithmsPanel {
         const w = this.getDefaultIDAStarWeight()
         this.store.toggleCompareAlgorithm(this.store.createIDAStarSpec(w))
       })
-
-      SymbolGlyph(this.showIDAStar ? $r('sys.symbol.chevron_down') : $r('sys.symbol.chevron_left'))
-        .fontSize(14)
-        .fontColor([this.store.getColor('navix_icon_color')])
-        .onClick(() => {
-          this.showIDAStar = !this.showIDAStar
-        })
     }
     .width('100%')
     .padding({ left: 10, right: 10, top: 7, bottom: 7 })
