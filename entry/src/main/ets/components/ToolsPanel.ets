@@ -36,7 +36,9 @@ export struct ToolsPanel {
         .color(this.store.getColor('navix_border_color'))
         .margin({ left: 8, right: 8, top: 2, bottom: 2 })
 
-      this.ToolButton(ToolType.RANDOM, '随机生成', '随机生成障碍物')
+      this.ToolButton(ToolType.RANDOM_OBSTACLE, '生成障碍', '随机生成障碍物')
+      this.ToolButton(ToolType.RANDOM_STARTING, '生成起点', '在空白区域随机设置起点')
+      this.ToolButton(ToolType.RANDOM_FINISHING, '生成终点', '在空白区域随机设置终点')
     }
     .width('100%')
     .height('100%')
@@ -67,8 +69,12 @@ export struct ToolsPanel {
       this.hoveredTool = isHover ? tool : null
     })
     .onClick(() => {
-      if (tool === ToolType.RANDOM) {
+      if (tool === ToolType.RANDOM_OBSTACLE) {
         this.store.generateRandomObstacles()
+      } else if (tool === ToolType.RANDOM_STARTING) {
+        this.store.generateRandomStarting()
+      } else if (tool === ToolType.RANDOM_FINISHING) {
+        this.store.generateRandomFinishing()
       } else {
         this.store.setTool(tool)
       }

@@ -92,6 +92,11 @@ export class GreedyBFSPathfinder {
           if (!map.isWalkable(nr, nc)) {
             continue
           }
+          if (options.allowDiagonal && dr !== 0 && dc !== 0) {
+            if (!map.isWalkable(p.row + dr, p.col) || !map.isWalkable(p.row, p.col + dc)) {
+              continue
+            }
+          }
           const nid = indexOfPos(nr, nc, cols)
           if (closed[nid]) {
             continue
@@ -130,4 +135,3 @@ export class GreedyBFSPathfinder {
     return { found: true, cost: cost, explored: explored, path: path }
   }
 }
-

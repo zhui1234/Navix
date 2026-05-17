@@ -92,6 +92,11 @@ export class AStarPathfinder {
           if (!map.isWalkable(nr, nc)) {
             continue
           }
+          if (options.allowDiagonal && dr !== 0 && dc !== 0) {
+            if (!map.isWalkable(baseRow + dr, baseCol) || !map.isWalkable(baseRow, baseCol + dc)) {
+              continue
+            }
+          }
           if (!options.allowDiagonal && (nr !== baseRow && nc !== baseCol)) {
             continue
           }

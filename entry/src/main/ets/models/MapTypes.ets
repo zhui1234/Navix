@@ -37,7 +37,9 @@ export enum ToolType {
   END = 2,
   OBSTACLE = 3,
   ERASER = 4,
-  RANDOM = 5
+  RANDOM_OBSTACLE = 5,
+  RANDOM_STARTING = 6,
+  RANDOM_FINISHING = 7
 }
 
 export enum AlgorithmType {

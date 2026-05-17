@@ -502,6 +502,28 @@ export struct MapSettingsPanel {
         .width('100%')
         .padding({ left: 8, right: 8 })
       }
+
+      Column({ space: 4 }) {
+        Text('允许对角移动')
+          .fontSize(11)
+          .fontColor(this.store.getColor('navix_text_secondary'))
+          .width('100%')
+          .padding({ left: 8 })
+
+        Row({ space: 8 }) {
+          Text(this.store.params.allowDiagonal ? '开启' : '关闭')
+            .fontSize(12)
+            .fontColor(this.store.params.allowDiagonal ? this.store.getColor('navix_button_active') : this.store.getColor('navix_text_secondary'))
+            .backgroundColor(this.store.getColor('navix_bg_canvas'))
+            .borderRadius(4)
+            .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+            .onClick(() => {
+              this.store.updateParams({ allowDiagonal: !this.store.params.allowDiagonal })
+            })
+        }
+        .width('100%')
+        .padding({ left: 8, right: 8 })
+      }
     }
   }
 

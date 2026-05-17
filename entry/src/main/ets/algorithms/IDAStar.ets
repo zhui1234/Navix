@@ -97,6 +97,11 @@ export class IDAStarPathfinder {
         if (!map.isWalkable(nr, nc)) {
           continue
         }
+        if (options.allowDiagonal && d.row !== 0 && d.col !== 0) {
+          if (!map.isWalkable(p.row + d.row, p.col) || !map.isWalkable(p.row, p.col + d.col)) {
+            continue
+          }
+        }
         const nid = indexOfPos(nr, nc, cols)
         if (visited[nid]) {
           continue

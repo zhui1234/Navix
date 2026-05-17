@@ -339,6 +339,9 @@ export class DStarLitePlanner {
       return 1
     }
     if (dr === 1 && dc === 1) {
+      if (!this.map.isWalkable(pu.row, pv.col) || !this.map.isWalkable(pv.row, pu.col)) {
+        return Number.POSITIVE_INFINITY
+      }
       return Math.SQRT2
     }
     return Number.POSITIVE_INFINITY

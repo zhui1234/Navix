@@ -21,6 +21,9 @@ import { DFSPathfinder } from '../algorithms/DFS'
 import { GreedyBFSPathfinder } from '../algorithms/GreedyBFS'
 import { IDAStarPathfinder } from '../algorithms/IDAStar'
 import { DStarLitePathfinder, DStarLitePlanner } from '../algorithms/DStarLite'
+import { ThetaStarPathfinder } from '../algorithms/ThetaStar'
+import { RRTPathfinder } from '../algorithms/RRT'
+import { PRMPathfinder } from '../algorithms/PRM'
 
 export class AlgorithmCompareResult {
   algoId: string
@@ -428,6 +431,15 @@ export class NavixStore {
     if (spec.type === AlgorithmType.DSTAR_LITE) {
       return '#0F766E'
     }
+    if (spec.type === AlgorithmType.THETA_STAR) {
+      return '#0891B2'
+    }
+    if (spec.type === AlgorithmType.RRT) {
+      return '#EA580C'
+    }
+    if (spec.type === AlgorithmType.PRM) {
+      return '#0E7490'
+    }
     if (spec.type === AlgorithmType.BFS) {
       return '#22C55E'
     }
@@ -496,6 +508,18 @@ export class NavixStore {
       } else if (spec.type === AlgorithmType.DSTAR_LITE) {
         const t0 = Date.now()
         res = new DStarLitePathfinder().findPath(map, this.startPos, this.endPos, opts)
+        elapsedMs = Date.now() - t0
+      } else if (spec.type === AlgorithmType.THETA_STAR) {
+        const t0 = Date.now()
+        res = new ThetaStarPathfinder().findPath(map, this.startPos, this.endPos, opts)
+        elapsedMs = Date.now() - t0
+      } else if (spec.type === AlgorithmType.RRT) {
+        const t0 = Date.now()
+        res = new RRTPathfinder().findPath(map, this.startPos, this.endPos, opts)
+        elapsedMs = Date.now() - t0
+      } else if (spec.type === AlgorithmType.PRM) {
+        const t0 = Date.now()
+        res = new PRMPathfinder().findPath(map, this.startPos, this.endPos, opts)
         elapsedMs = Date.now() - t0
       } else if (spec.type === AlgorithmType.BFS) {
         const t0 = Date.now()
@@ -596,7 +620,7 @@ export class NavixStore {
 
   updateParams(partial: Partial<NavixParams>): void {
     const prev = this.params
-    this.params = {
+    const next: NavixParams = {
       gridRows: partial.gridRows !== undefined ? partial.gridRows : prev.gridRows,
       gridCols: partial.gridCols !== undefined ? partial.gridCols : prev.gridCols,
       cellSize: partial.cellSize !== undefined ? partial.cellSize : prev.cellSize,
@@ -608,6 +632,15 @@ export class NavixStore {
       allowDiagonal: partial.allowDiagonal !== undefined ? partial.allowDiagonal : prev.allowDiagonal,
       heuristicWeight: partial.heuristicWeight !== undefined ? partial.heuristicWeight : prev.heuristicWeight,
       animationSpeed: partial.animationSpeed !== undefined ? partial.animationSpeed : prev.animationSpeed
+    }
+    this.params = next
+    if (next.allowDiagonal !== prev.allowDiagonal) {
+      if (this.compareResults.length > 0) {
+        this.compareResults = []
+      }
+      if (this.visualizationMode !== VisualizationMode.NONE) {
+        this.clearVisualization()
+      }
     }
   }
 
@@ -837,7 +870,7 @@ export class NavixStore {
     if (this.currentMapType !== MapType.GRID) {
       return
     }
-    if (this.currentTool === null || this.currentTool === ToolType.SELECT || this.currentTool === ToolType.RANDOM) {
+    if (this.currentTool === null || this.currentTool === ToolType.SELECT || this.currentTool === ToolType.RANDOM_OBSTACLE) {
       return
     }
     if (row < 0 || row >= this.mapData.rows || col < 0 || col >= this.mapData.cols) {
@@ -1030,11 +1063,14 @@ export class NavixStore {
     if (!(spec.type === AlgorithmType.ASTAR
       || spec.type === AlgorithmType.DIJKSTRA
       || spec.type === AlgorithmType.DSTAR_LITE
+      || spec.type === AlgorithmType.THETA_STAR
+      || spec.type === AlgorithmType.RRT
+      || spec.type === AlgorithmType.PRM
       || spec.type === AlgorithmType.BFS
       || spec.type === AlgorithmType.DFS
       || spec.type === AlgorithmType.GREEDY_BFS
       || spec.type === AlgorithmType.IDA_STAR)) {
-      this.statusText = '当前仅实现 A* / Dijkstra / D* Lite / BFS / DFS / 贪心BFS / IDA* 的可视化'
+      this.statusText = '当前仅实现 A* / Dijkstra / D* Lite / Theta* / RRT / PRM / BFS / DFS / 贪心BFS / IDA* 的可视化'
       return
     }
 
@@ -1064,6 +1100,15 @@ export class NavixStore {
       this.dStarLitePendingGoal = null
       this.dStarLitePlanner = new DStarLitePlanner(map, this.startPos, this.endPos, opts)
       res = this.dStarLitePlanner.replan(opts).result
+    } else if (spec.type === AlgorithmType.THETA_STAR) {
+      this.dStarLitePlanner = null
+      res = new ThetaStarPathfinder().findPath(map, this.startPos, this.endPos, opts)
+    } else if (spec.type === AlgorithmType.RRT) {
+      this.dStarLitePlanner = null
+      res = new RRTPathfinder().findPath(map, this.startPos, this.endPos, opts)
+    } else if (spec.type === AlgorithmType.PRM) {
+      this.dStarLitePlanner = null
+      res = new PRMPathfinder().findPath(map, this.startPos, this.endPos, opts)
     } else if (spec.type === AlgorithmType.BFS) {
       this.dStarLitePlanner = null
       res = new BFSPathfinder().findPath(map, this.startPos, this.endPos, opts)
@@ -1185,6 +1230,48 @@ export class NavixStore {
       }
     }
     this.markMapChanged()
+  }
+
+  private pickRandomEmptyCell(exclude: GridPos | null): GridPos | null {
+    if (this.currentMapType !== MapType.GRID) {
+      return null
+    }
+    const candidates: GridPos[] = []
+    for (let i = 0; i < this.mapData.rows; i++) {
+      for (let j = 0; j < this.mapData.cols; j++) {
+        if (this.mapData.grid[i][j] === NodeType.OBSTACLE) {
+          continue
+        }
+        if (exclude && exclude.row === i && exclude.col === j) {
+          continue
+        }
+        candidates.push({ row: i, col: j })
+      }
+    }
+    if (candidates.length === 0) {
+      return null
+    }
+    return candidates[Math.floor(Math.random() * candidates.length)]
+  }
+
+  generateRandomStarting(): void {
+    const exclude = this.endPos
+    const p = this.pickRandomEmptyCell(exclude)
+    if (!p) {
+      this.statusText = '没有可用空地生成起点'
+      return
+    }
+    this.setCellAsStart(p.row, p.col)
+  }
+
+  generateRandomFinishing(): void {
+    const exclude = this.startPos
+    const p = this.pickRandomEmptyCell(exclude)
+    if (!p) {
+      this.statusText = '没有可用空地生成终点'
+      return
+    }
+    this.setCellAsEnd(p.row, p.col)
   }
 
   resizeMap(rows: number, cols: number): void {

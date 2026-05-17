@@ -51,7 +51,7 @@ export struct MainCanvas {
       && this.store.currentMapType === MapType.GRID
       && this.store.currentTool !== null
       && this.store.currentTool !== ToolType.SELECT
-      && this.store.currentTool !== ToolType.RANDOM
+      && this.store.currentTool !== ToolType.RANDOM_OBSTACLE
       && this.algorithm === null
   }
 
@@ -602,7 +602,7 @@ export struct MainCanvas {
                           if (this.algorithm !== null) {
                             return
                           }
-                          if (this.store.currentTool === ToolType.RANDOM) {
+                          if (this.store.currentTool === ToolType.RANDOM_OBSTACLE) {
                             return
                           }
                           this.store.applyToolAt(rowIndex, colIndex)

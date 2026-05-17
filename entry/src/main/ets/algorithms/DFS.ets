@@ -67,6 +67,11 @@ export class DFSPathfinder {
           if (!map.isWalkable(nr, nc)) {
             continue
           }
+          if (options.allowDiagonal && dr !== 0 && dc !== 0) {
+            if (!map.isWalkable(base.row + dr, base.col) || !map.isWalkable(base.row, base.col + dc)) {
+              continue
+            }
+          }
           const nid = indexOfPos(nr, nc, cols)
           if (visited[nid]) {
             continue
@@ -104,4 +109,3 @@ export class DFSPathfinder {
     return { found: true, cost: cost, explored: explored, path: path }
   }
 }
-
