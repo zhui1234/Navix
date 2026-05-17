@@ -1,4 +1,4 @@
-import { NavixStore, navixStore } from '../store/NavixStore'
+import { NavixStore, navixStore, AlgorithmCompareResult } from '../store/NavixStore'
 import { NodeType, ToolType, MapType, AlgorithmSpec, VisualizationMode } from '../models/MapTypes'
 
 const MINIMAP_SIZE: number = 120
@@ -29,6 +29,10 @@ export struct MainCanvas {
   @Param algorithm: string | null = null
   private horizontalScroller: Scroller = new Scroller()
   private verticalScroller: Scroller = new Scroller()
+  private comparePathSettings: RenderingContextSettings = new RenderingContextSettings(true)
+  private comparePathContext: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.comparePathSettings)
+  private comparePathCanvasReady: boolean = false
+  private comparePathDrawSignature: string = ''
   @Local private painting: boolean = false
   @Local private lastPaintKey: string = ''
   @Local private canvasWidth: number = 0
@@ -93,21 +97,155 @@ export struct MainCanvas {
   }
 
   @Builder
-  ComparePathOverlay(row: number, col: number, base: NodeType) {
-    if (this.store.visualizationMode === VisualizationMode.NONE) {
-      if (this.getComparePathColors(row, col, base).length > 0) {
-        Row({ space: 0 }) {
-          ForEach(this.getComparePathColors(row, col, base), (color: string, _idx: number) => {
-            Column()
-              .layoutWeight(1)
-              .height('100%')
-              .backgroundColor(color)
-              .opacity(0.55)
-          }, (_color: string, idx: number) => `${this.store.mapVersion}-${row}-${col}-${idx}`)
-        }
-        .width('100%')
-        .height('100%')
+  ComparePathPolylineOverlay() {
+    if (this.shouldShowComparePathPolyline()) {
+      Stack() {
+        Canvas(this.comparePathContext)
+          .width(this.getComparePathCanvasWidth())
+          .height(this.getComparePathCanvasHeight())
+          .position({ x: 0, y: 0 })
+          .hitTestBehavior(HitTestMode.Transparent)
+          .onReady(() => {
+            this.comparePathCanvasReady = true
+            this.comparePathDrawSignature = ''
+            this.drawComparePathPolyline()
+          })
+
+        ForEach([this.buildComparePathDrawSignature()], (_sig: string) => {
+          Text('')
+            .width(0)
+            .height(0)
+            .opacity(0)
+            .onAppear(() => {
+              this.drawComparePathPolyline()
+            })
+        }, (sig: string) => sig)
       }
+      .width(this.getComparePathCanvasWidth())
+      .height(this.getComparePathCanvasHeight())
+      .alignContent(Alignment.TopStart)
+    }
+  }
+
+  shouldShowComparePathPolyline(): boolean {
+    return this.algorithm === null
+      && this.store.currentMapType === MapType.GRID
+      && this.store.visualizationMode === VisualizationMode.NONE
+      && this.store.compareResults.length > 0
+      && this.store.selectedAlgorithms.length > 0
+  }
+
+  private getComparePathCanvasWidth(): number {
+    return this.store.mapData.cols * this.getScaledCellSize()
+  }
+
+  private getComparePathCanvasHeight(): number {
+    return this.store.mapData.rows * this.getScaledCellSize()
+  }
+
+  private buildComparePathDrawSignature(): string {
+    const cell = this.getScaledCellSize()
+    const base = `${this.store.mapData.rows}x${this.store.mapData.cols}-${cell}-${this.store.params.showGridLines ? 1 : 0}-${this.store.params.allowDiagonal ? 1 : 0}`
+    const parts: string[] = []
+    for (let i = 0; i < this.store.selectedAlgorithms.length; i++) {
+      const spec = this.store.selectedAlgorithms[i]
+      const r = this.store.getCompareResult(spec.id)
+      if (!r || !r.implemented || !r.found) {
+        parts.push(`${spec.id}:0`)
+        continue
+      }
+      parts.push(`${spec.id}:${this.hashPathIds(r.pathIds)}:${r.pathIds.length}`)
+    }
+    return `${base}|${parts.join('|')}`
+  }
+
+  private hashPathIds(ids: number[]): number {
+    let h = 0
+    for (let i = 0; i < ids.length; i++) {
+      h = (h * 31 + ids[i]) >>> 0
+    }
+    return h
+  }
+
+  private drawComparePathPolyline(): void {
+    if (!this.comparePathCanvasReady) {
+      return
+    }
+    if (!this.shouldShowComparePathPolyline()) {
+      return
+    }
+    const sig = this.buildComparePathDrawSignature()
+    if (sig === this.comparePathDrawSignature) {
+      return
+    }
+    this.comparePathDrawSignature = sig
+
+    const cell = this.getScaledCellSize()
+    const ctx = this.comparePathContext
+    ctx.clearRect(0, 0, ctx.width, ctx.height)
+
+    const specs: AlgorithmSpec[] = []
+    const results: AlgorithmCompareResult[] = []
+    for (let i = 0; i < this.store.selectedAlgorithms.length; i++) {
+      const spec = this.store.selectedAlgorithms[i]
+      const result = this.store.getCompareResult(spec.id)
+      if (result && result.implemented && result.found && result.pathIds.length >= 2) {
+        specs.push(spec)
+        results.push(result)
+      }
+    }
+
+    if (specs.length === 0) {
+      return
+    }
+
+    const baseWidth = Math.max(2, Math.round(cell * 0.22))
+    const spacing = Math.max(3, Math.round(baseWidth * 1.4))
+    const centerIndex = (specs.length - 1) / 2
+
+    for (let i = 0; i < specs.length; i++) {
+      const spec = specs[i]
+      const result = results[i]
+
+      const offset = (i - centerIndex) * spacing
+      ctx.beginPath()
+      for (let k = 0; k < result.pathIds.length; k++) {
+        const id = result.pathIds[k]
+        const row = Math.floor(id / this.store.mapData.cols)
+        const col = id - row * this.store.mapData.cols
+        const x0 = (col + 0.5) * cell
+        const y0 = (row + 0.5) * cell
+
+        const prevId = result.pathIds[k > 0 ? k - 1 : 0]
+        const nextId = result.pathIds[k < result.pathIds.length - 1 ? k + 1 : result.pathIds.length - 1]
+
+        const pr = Math.floor(prevId / this.store.mapData.cols)
+        const pc = prevId - pr * this.store.mapData.cols
+        const nr = Math.floor(nextId / this.store.mapData.cols)
+        const nc = nextId - nr * this.store.mapData.cols
+
+        const x1 = (nc + 0.5) * cell - (pc + 0.5) * cell
+        const y1 = (nr + 0.5) * cell - (pr + 0.5) * cell
+        const len = Math.sqrt(x1 * x1 + y1 * y1)
+        const nx = len > 1e-6 ? (-y1 / len) : 0
+        const ny = len > 1e-6 ? (x1 / len) : 0
+
+        const x = x0 + nx * offset
+        const y = y0 + ny * offset
+
+        if (k === 0) {
+          ctx.moveTo(x, y)
+        } else {
+          ctx.lineTo(x, y)
+        }
+      }
+      ctx.lineWidth = baseWidth
+      ctx.strokeStyle = this.store.getAlgorithmPathColor(spec)
+      ctx.globalAlpha = 0.8
+      ctx.lineJoin = 'round'
+      ctx.lineCap = 'round'
+      ctx.stroke()
+      ctx.globalAlpha = 1.0
     }
   }
 
@@ -511,66 +649,83 @@ export struct MainCanvas {
       Stack() {
         Scroll(this.horizontalScroller) {
           Scroll(this.verticalScroller) {
-            Column({ space: 0 }) {
-              ForEach(this.store.mapData.grid, (row: NodeType[], rowIndex: number) => {
-                Row({ space: 0 }) {
-                  ForEach(row, (cell: NodeType, colIndex: number) => {
-                    if (this.algorithm === null && this.store.currentTool === ToolType.SELECT) {
-                      if (this.isCellSelected(rowIndex, colIndex)) {
-                        Stack() {
-                          Column()
-                            .width('100%')
-                            .height('100%')
-                            .backgroundColor(this.getCellColor(this.getDisplayNodeType(rowIndex, colIndex, cell)))
-                          this.ComparePathOverlay(rowIndex, colIndex, cell)
-                          this.VisualizationOverlay(rowIndex, colIndex, cell)
-                          Column()
-                            .width('100%')
-                            .height('100%')
-                            .border({ width: 2, color: this.store.getColor('navix_accent_highlight') })
-                            .backgroundColor(Color.Transparent)
+            Stack() {
+              Column({ space: 0 }) {
+                ForEach(this.store.mapData.grid, (row: NodeType[], rowIndex: number) => {
+                  Row({ space: 0 }) {
+                    ForEach(row, (cell: NodeType, colIndex: number) => {
+                      if (this.algorithm === null && this.store.currentTool === ToolType.SELECT) {
+                        if (this.isCellSelected(rowIndex, colIndex)) {
+                          Stack() {
+                            Column()
+                              .width('100%')
+                              .height('100%')
+                              .backgroundColor(this.getCellColor(this.getDisplayNodeType(rowIndex, colIndex, cell)))
+                            this.VisualizationOverlay(rowIndex, colIndex, cell)
+                            Column()
+                              .width('100%')
+                              .height('100%')
+                              .border({ width: 2, color: this.store.getColor('navix_accent_highlight') })
+                              .backgroundColor(Color.Transparent)
+                          }
+                            .width(this.getScaledCellSize())
+                            .height(this.getScaledCellSize())
+                            .border({
+                              width: this.store.params.showGridLines ? 1 : 0,
+                              color: this.store.params.gridLineColor || this.store.getColor('navix_grid_line')
+                            })
+                            .onClick(() => {
+                              this.store.selectCell(rowIndex, colIndex)
+                              this.store.openSelectedCellMenu()
+                            })
+                            .bindMenu(this.store.selectedCellMenuOpen && this.isCellSelected(rowIndex, colIndex), [
+                              {
+                                value: '设为障碍',
+                                action: () => {
+                                  this.store.setCellAsObstacle(rowIndex, colIndex)
+                                }
+                              },
+                              {
+                                value: '设为起点',
+                                action: () => {
+                                  this.store.setCellAsStart(rowIndex, colIndex)
+                                }
+                              },
+                              {
+                                value: '设为终点',
+                                action: () => {
+                                  this.store.setCellAsEnd(rowIndex, colIndex)
+                                }
+                              }
+                            ], {
+                              onDisappear: () => {
+                                this.store.closeSelectedCellMenu()
+                              }
+                            })
+                        } else {
+                          Stack() {
+                            Column()
+                              .width('100%')
+                              .height('100%')
+                              .backgroundColor(this.getCellColor(this.getDisplayNodeType(rowIndex, colIndex, cell)))
+                            this.VisualizationOverlay(rowIndex, colIndex, cell)
+                          }
+                            .width(this.getScaledCellSize())
+                            .height(this.getScaledCellSize())
+                            .border({
+                              width: this.store.params.showGridLines ? 1 : 0,
+                              color: this.store.params.gridLineColor || this.store.getColor('navix_grid_line')
+                            })
+                            .onClick(() => {
+                              this.store.selectCell(rowIndex, colIndex)
+                            })
                         }
-                          .width(this.getScaledCellSize())
-                          .height(this.getScaledCellSize())
-                          .border({
-                            width: this.store.params.showGridLines ? 1 : 0,
-                            color: this.store.params.gridLineColor || this.store.getColor('navix_grid_line')
-                          })
-                          .onClick(() => {
-                            this.store.selectCell(rowIndex, colIndex)
-                            this.store.openSelectedCellMenu()
-                          })
-                          .bindMenu(this.store.selectedCellMenuOpen && this.isCellSelected(rowIndex, colIndex), [
-                            {
-                              value: '设为障碍',
-                              action: () => {
-                                this.store.setCellAsObstacle(rowIndex, colIndex)
-                              }
-                            },
-                            {
-                              value: '设为起点',
-                              action: () => {
-                                this.store.setCellAsStart(rowIndex, colIndex)
-                              }
-                            },
-                            {
-                              value: '设为终点',
-                              action: () => {
-                                this.store.setCellAsEnd(rowIndex, colIndex)
-                              }
-                            }
-                          ], {
-                            onDisappear: () => {
-                              this.store.closeSelectedCellMenu()
-                            }
-                          })
                       } else {
                         Stack() {
                           Column()
                             .width('100%')
                             .height('100%')
                             .backgroundColor(this.getCellColor(this.getDisplayNodeType(rowIndex, colIndex, cell)))
-                          this.ComparePathOverlay(rowIndex, colIndex, cell)
                           this.VisualizationOverlay(rowIndex, colIndex, cell)
                         }
                           .width(this.getScaledCellSize())
@@ -580,39 +735,23 @@ export struct MainCanvas {
                             color: this.store.params.gridLineColor || this.store.getColor('navix_grid_line')
                           })
                           .onClick(() => {
-                            this.store.selectCell(rowIndex, colIndex)
+                            if (this.algorithm !== null) {
+                              return
+                            }
+                            if (this.store.currentTool === ToolType.RANDOM_OBSTACLE) {
+                              return
+                            }
+                            this.store.applyToolAt(rowIndex, colIndex)
                           })
                       }
-                    } else {
-                      Stack() {
-                        Column()
-                          .width('100%')
-                          .height('100%')
-                          .backgroundColor(this.getCellColor(this.getDisplayNodeType(rowIndex, colIndex, cell)))
-                        this.ComparePathOverlay(rowIndex, colIndex, cell)
-                        this.VisualizationOverlay(rowIndex, colIndex, cell)
-                      }
-                        .width(this.getScaledCellSize())
-                        .height(this.getScaledCellSize())
-                        .border({
-                          width: this.store.params.showGridLines ? 1 : 0,
-                          color: this.store.params.gridLineColor || this.store.getColor('navix_grid_line')
-                        })
-                        .onClick(() => {
-                          if (this.algorithm !== null) {
-                            return
-                          }
-                          if (this.store.currentTool === ToolType.RANDOM_OBSTACLE) {
-                            return
-                          }
-                          this.store.applyToolAt(rowIndex, colIndex)
-                        })
-                    }
-                  }, (_cell: NodeType, colIndex: number) => `${this.store.mapVersion}-${rowIndex}-${colIndex}`)
-                }
-              }, (_row: NodeType[], rowIndex: number) => `${this.store.mapVersion}-${rowIndex}`)
+                    }, (_cell: NodeType, colIndex: number) => `${this.store.mapVersion}-${rowIndex}-${colIndex}`)
+                  }
+                }, (_row: NodeType[], rowIndex: number) => `${this.store.mapVersion}-${rowIndex}`)
+              }
+
+              this.ComparePathPolylineOverlay()
             }
-            .alignItems(HorizontalAlign.Start)
+            .alignContent(Alignment.TopStart)
             .margin({ right: 10, bottom: 10 })
             .onTouch((event: TouchEvent) => {
               if (event.type === TouchType.Down) {

@@ -66,7 +66,10 @@ export class IDAStarPathfinder {
     const pathStack: number[] = []
     const dirs = pushNeighborDirs(options.allowDiagonal)
 
-    const h0 = heuristic(start.row, start.col, end.row, end.col, options.heuristicType) * options.heuristicWeight
+    const effectiveHeuristicType: HeuristicType =
+      (options.allowDiagonal && options.heuristicType === 'manhattan') ? 'octile' : options.heuristicType
+
+    const h0 = heuristic(start.row, start.col, end.row, end.col, effectiveHeuristicType) * options.heuristicWeight
     let threshold = h0
 
     const maxIterations = n * 4
@@ -76,7 +79,7 @@ export class IDAStarPathfinder {
 
     const dfs = (id: number, g: number, bound: number): number => {
       const p = posFromIndex(id, cols)
-      const h = heuristic(p.row, p.col, end.row, end.col, options.heuristicType) * options.heuristicWeight
+      const h = heuristic(p.row, p.col, end.row, end.col, effectiveHeuristicType) * options.heuristicWeight
       const f = g + h
       if (f > bound) {
         return f

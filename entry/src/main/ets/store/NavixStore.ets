@@ -35,8 +35,9 @@ export class AlgorithmCompareResult {
   elapsedMs: number
   exploredMask: boolean[]
   pathMask: boolean[]
+  pathIds: number[]
 
-  constructor(algoId: string, implemented: boolean, found: boolean, cost: number, exploredCount: number, pathLength: number, elapsedMs: number, exploredMask: boolean[], pathMask: boolean[]) {
+  constructor(algoId: string, implemented: boolean, found: boolean, cost: number, exploredCount: number, pathLength: number, elapsedMs: number, exploredMask: boolean[], pathMask: boolean[], pathIds: number[]) {
     this.algoId = algoId
     this.implemented = implemented
     this.found = found
@@ -46,6 +47,7 @@ export class AlgorithmCompareResult {
     this.elapsedMs = elapsedMs
     this.exploredMask = exploredMask
     this.pathMask = pathMask
+    this.pathIds = pathIds
   }
 }
 
@@ -538,7 +540,7 @@ export class NavixStore {
         res = new IDAStarPathfinder().findPath(map, this.startPos, this.endPos, opts)
         elapsedMs = Date.now() - t0
       } else {
-        results.push(new AlgorithmCompareResult(spec.id, false, false, 0, 0, 0, 0, new Array<boolean>(n).fill(false), new Array<boolean>(n).fill(false)))
+        results.push(new AlgorithmCompareResult(spec.id, false, false, 0, 0, 0, 0, new Array<boolean>(n).fill(false), new Array<boolean>(n).fill(false), []))
         continue
       }
 
@@ -560,7 +562,16 @@ export class NavixStore {
         }
       }
 
-      results.push(new AlgorithmCompareResult(spec.id, true, res.found, res.cost, res.explored.length, res.path.length, elapsedMs, exploredMask, pathMask))
+      const pathIds: number[] = []
+      for (let k = 0; k < res.path.length; k++) {
+        const p = res.path[k]
+        const id = p.row * this.mapData.cols + p.col
+        if (id >= 0 && id < n) {
+          pathIds.push(id)
+        }
+      }
+
+      results.push(new AlgorithmCompareResult(spec.id, true, res.found, res.cost, res.explored.length, res.path.length, elapsedMs, exploredMask, pathMask, pathIds))
     }
 
     this.compareResults = results
